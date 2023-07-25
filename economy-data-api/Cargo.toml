@@ -1,0 +1,9 @@
+[package]
+name = "economy-data-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.6.19"
+tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread"] }
+poeledger-economy-data = "0.1.0"

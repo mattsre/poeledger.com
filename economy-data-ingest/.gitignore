@@ -1,0 +1,8 @@
+debug/
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+Sanctum.currency.csv
+Sanctum.items.csv
