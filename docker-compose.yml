@@ -1,25 +1,15 @@
 version: "3"
 
 services:
-  web-client:
-    build: web-client/
-    ports:
-      - "3000:3000"
-    x-develop:
-      watch:
-        - action: rebuild
-          path: web-client/src/
-        - action: rebuild
-          path: web-client/package.json
   economy-data-api:
     build: economy-data-api/
     ports:
       - "5000:5000"
     environment:
       - PORT=5000
-      - SURREAL_HOST=${SURREAL_HOST}
-      - SURREAL_USER=${SURREAL_USER}
-      - SURREAL_PASSWORD=${SURREAL_PASSWORD}
+      - SURREAL_HOST=ws://surrealdb:8000
+      - SURREAL_USER=admin
+      - SURREAL_PASS=admin
     x-develop:
       watch:
         - action: rebuild
@@ -27,16 +17,16 @@ services:
         - action: rebuild
           path: economy-data-api/Cargo.toml
   surrealdb:
+    build: economy-data-db/
     entrypoint: 
       - /surreal 
       - start 
       - --user
-      - root
+      - admin
       - --pass
-      - localadmin
-      - file:/economy-data-db/economy.db
-    image: surrealdb/surrealdb:latest
+      - admin
+      - file:/.data/surrealdb/economy.db
     ports:
       - "8000:8000"
     volumes:
-      - ./economy-data-db:/economy-data-db
+      - ./.data/surrealdb/:/.data/surrealdb/

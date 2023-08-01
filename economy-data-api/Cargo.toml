@@ -9,4 +9,7 @@ tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread"] }
 poeledger-economy-data = "0.1.0"
 serde = { version = "1.0.176", features = ["derive"] }
 anyhow = "1.0.72"
-surrealdb = "1.0.0-beta.9"
+surrealdb = { git = "https://github.com/surrealdb/surrealdb", tag = "v1.0.0-beta.9+20230402", features = [
+  "protocol-ws",
+  "native-tls",
+] }

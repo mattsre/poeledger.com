@@ -42,11 +42,17 @@ export const meta: V2_MetaFunction = () => {
   ];
 };
 
-export async function loader() {
-  const request = await fetch("http://127.0.0.1:5000");
-  const records = await request.json();
+export const loader = async () => {
+  let backendHost = process.env.BACKEND_HOST;
 
-  return json(records);
+  if (backendHost) {
+    const request = await fetch(backendHost);
+    const records = await request.json();
+
+    return json(records);
+  }
+
+  return json([]);
 }
 
 ChartJS.register(
