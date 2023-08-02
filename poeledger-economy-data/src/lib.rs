@@ -26,12 +26,12 @@ pub enum Confidence {
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub struct CurrencyPriceRecord {
-    league: League,
-    date: NaiveDate,
-    get: String,
-    pay: String,
-    value: f32,
-    confidence: Confidence,
+    pub league: League,
+    pub date: NaiveDate,
+    pub get: String,
+    pub pay: String,
+    pub value: f32,
+    pub confidence: Confidence,
 }
 
 impl TryFrom<String> for CurrencyPriceRecord {

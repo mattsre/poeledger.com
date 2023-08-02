@@ -1,8 +1,9 @@
 use std::env;
 
-use axum::extract::State;
-use axum::{extract::Path, routing::get, Json, Router};
+use axum::extract::{Query, State};
+use axum::{routing::get, Json, Router};
 use poeledger_economy_data::CurrencyPriceRecord;
+use serde::{Deserialize, Serialize};
 use surrealdb::engine::any::Any;
 use surrealdb::opt::auth::Root;
 use surrealdb::Surreal;
@@ -18,6 +19,49 @@ impl ApiState {
     pub fn new() -> Self {
         Self { db: DB.clone() }
     }
+}
+
+#[derive(Deserialize)]
+struct PricesQuery {
+    get: String,
+    pay: String,
+    league: String,
+}
+
+#[derive(Serialize, Deserialize)]
+enum RatesWindow {
+    #[serde(rename = "7D")]
+    SevenDay,
+    #[serde(rename = "14D")]
+    FourteenDay,
+    #[serde(rename = "30D")]
+    ThirtyDay,
+    #[serde(rename = "90D")]
+    NinentyDay,
+}
+
+impl RatesWindow {
+    pub fn value(&self) -> u16 {
+        match self {
+            RatesWindow::SevenDay => 7,
+            RatesWindow::FourteenDay => 14,
+            RatesWindow::ThirtyDay => 30,
+            RatesWindow::NinentyDay => 90,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct RatesQuery {
+    get: String,
+    pay: String,
+    league: String,
+    window: RatesWindow,
+}
+
+#[derive(Serialize, Deserialize)]
+struct RatesResponse {
+    rate: f32,
 }
 
 #[tokio::main]
@@ -43,9 +87,8 @@ async fn main() -> anyhow::Result<()> {
     DB.use_ns("economy").use_db("economy").await?;
 
     let app = Router::new()
-        .route("/", get(handler))
-        .route("/hello", get(hello_world))
-        .route("/hello/:name", get(hello_name))
+        .route("/prices", get(prices_handler))
+        .route("/rates", get(rates_handler))
         .with_state(ApiState::new());
 
     // run it
@@ -60,8 +103,11 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn handler(State(state): State<ApiState>) -> Json<Vec<CurrencyPriceRecord>> {
-    let query = state.db.query("SELECT * FROM prices WHERE get = 'Divine Orb' AND league = 'Sanctum' AND pay = 'Chaos Orb' ORDER BY date LIMIT 50").await;
+async fn prices_handler(
+    State(state): State<ApiState>,
+    query: Query<PricesQuery>,
+) -> Json<Vec<CurrencyPriceRecord>> {
+    let query = state.db.query("SELECT * FROM prices WHERE get = $get AND pay = $pay AND league = $league ORDER BY date LIMIT 120").bind(("get", &query.get)).bind(("pay", &query.pay)).bind(("league", &query.league)).await;
     match query {
         Ok(mut res) => {
             let records: Vec<CurrencyPriceRecord> = res.take(0).unwrap();
@@ -71,10 +117,30 @@ async fn handler(State(state): State<ApiState>) -> Json<Vec<CurrencyPriceRecord>
     }
 }
 
-async fn hello_world() -> String {
-    "Hello World".to_string()
-}
+async fn rates_handler(
+    State(state): State<ApiState>,
+    query: Query<RatesQuery>,
+) -> Json<RatesResponse> {
+    let price_history_limit = query.window.value();
 
-async fn hello_name(Path(name): Path<String>) -> String {
-    format!("Hello {name}")
+    let query = state.db.query("SELECT * FROM prices WHERE get = $get AND pay = $pay AND league = $league ORDER BY date LIMIT $limit").bind(("get", &query.get)).bind(("pay", &query.pay)).bind(("league", &query.league)).bind(("limit", &price_history_limit)).await;
+    match query {
+        Ok(mut res) => {
+            let records: Vec<CurrencyPriceRecord> = res.take(0).unwrap();
+
+            if !records.is_empty() {
+                let initial_value = &records.first().unwrap().value;
+                let end_value = &records.last().unwrap().value;
+
+                let change_percentage = ((end_value - initial_value) / initial_value) * 100 as f32;
+
+                return Json(RatesResponse {
+                    rate: change_percentage,
+                });
+            }
+
+            Json(RatesResponse { rate: 0 as f32 })
+        }
+        Err(_) => Json(RatesResponse { rate: 0 as f32 }),
+    }
 }

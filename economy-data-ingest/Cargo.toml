@@ -14,4 +14,4 @@ surrealdb = { git = "https://github.com/surrealdb/surrealdb", tag = "v1.0.0-beta
   "native-tls",
 ] }
 tokio = { version = "1.29.1", features = ["macros", "rt-multi-thread"] }
-poeledger-economy-data = "0.1.0"
+poeledger-economy-data = "0.1.1"
