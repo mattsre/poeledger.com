@@ -46,6 +46,7 @@ export const meta: V2_MetaFunction = () => {
 };
 
 export const loader = async ({ request }: LoaderArgs) => {
+  console.log("loading");
   let backendHost = process.env.BACKEND_HOST;
 
   if (backendHost) {
