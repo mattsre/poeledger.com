@@ -1,21 +1,44 @@
-import { renderToString } from 'react-dom/server';
-import { RemixServer } from '@remix-run/react';
-import type { EntryContext } from '@remix-run/node';
-import { injectStyles, createStylesServer } from '@mantine/remix';
+import { renderToString } from "react-dom/server";
+import { RemixServer } from "@remix-run/react";
+import type { EntryContext } from "@remix-run/node";
+import { injectStyles, createStylesServer } from "@mantine/remix";
+import createEmotionServer from "@emotion/server/create-instance";
 
-const server = createStylesServer();
+import { ServerStyleContext } from "./context";
+import createEmotionCache from "./createEmotionCache";
+import { CacheProvider } from "@emotion/react";
 
 export default function handleRequest(
-  request: Request,
-  responseStatusCode: number,
-  responseHeaders: Headers,
-  remixContext: EntryContext
+	request: Request,
+	responseStatusCode: number,
+	responseHeaders: Headers,
+	remixContext: EntryContext,
 ) {
-  let markup = renderToString(<RemixServer context={remixContext} url={request.url} />);
-  responseHeaders.set('Content-Type', 'text/html');
+	const cache = createEmotionCache();
+	const { extractCriticalToChunks } = createEmotionServer(cache);
 
-  return new Response(`<!DOCTYPE html>${injectStyles(markup, server)}`, {
-    status: responseStatusCode,
-    headers: responseHeaders,
-  });
+	const html = renderToString(
+		<ServerStyleContext.Provider value={null}>
+			<CacheProvider value={cache}>
+				<RemixServer context={remixContext} url={request.url} />
+			</CacheProvider>
+		</ServerStyleContext.Provider>,
+	);
+
+	const chunks = extractCriticalToChunks(html);
+
+	const markup = renderToString(
+		<ServerStyleContext.Provider value={chunks.styles}>
+			<CacheProvider value={cache}>
+				<RemixServer context={remixContext} url={request.url} />
+			</CacheProvider>
+		</ServerStyleContext.Provider>,
+	);
+
+	responseHeaders.set("Content-Type", "text/html");
+
+	return new Response(`<!DOCTYPE html>${markup}`, {
+		status: responseStatusCode,
+		headers: responseHeaders,
+	});
 }
