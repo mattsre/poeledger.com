@@ -155,8 +155,7 @@ fn get_nano_timestamp(date: NaiveDate) -> i64 {
 
 #[cfg(test)]
 mod tests {
-    use poeledger_economy_data::{CurrencyPriceRecord, ItemPriceRecord, PriceRecord};
-    use serde::{Deserialize, Serialize};
+    use poeledger_economy_data::{CurrencyPriceRecord, ItemPriceRecord};
 
     #[test]
     fn deserialize_currency_price_record() -> anyhow::Result<()> {
