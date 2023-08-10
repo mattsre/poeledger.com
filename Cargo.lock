@@ -681,7 +681,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
- "poeledger-economy-data 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "poeledger-economy-data 0.1.1",
  "serde",
  "surrealdb",
  "tokio",
@@ -700,7 +700,7 @@ dependencies = [
  "influxdb2-derive",
  "influxdb2-structmap",
  "num-traits",
- "poeledger-economy-data 0.1.1",
+ "poeledger-economy-data 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "tokio",
 ]
@@ -1789,6 +1789,8 @@ dependencies = [
 [[package]]
 name = "poeledger-economy-data"
 version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea8e84eb5e4bb23fdfe56f760c5b8b1e572c161856b9dc436ab899148105be25"
 dependencies = [
  "chrono",
  "serde",
@@ -1797,9 +1799,18 @@ dependencies = [
 
 [[package]]
 name = "poeledger-economy-data"
-version = "0.1.1"
+version = "0.2.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "poeledger-economy-data"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea8e84eb5e4bb23fdfe56f760c5b8b1e572c161856b9dc436ab899148105be25"
+checksum = "ec10371a5cdb77db79493f5d8709fa761411e1c9f3c058dffde8ddb40d2d790e"
 dependencies = [
  "chrono",
  "serde",
