@@ -71,6 +71,7 @@ impl ToString for Confidence {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[serde(default)]
 pub struct CurrencyPriceRecord {
     #[serde(rename = "League")]
     pub league: League,
@@ -87,6 +88,7 @@ pub struct CurrencyPriceRecord {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[serde(default)]
 pub struct ItemPriceRecord {
     #[serde(rename = "League")]
     pub league: League,
@@ -99,11 +101,11 @@ pub struct ItemPriceRecord {
     #[serde(rename = "Name")]
     pub name: String,
     #[serde(rename = "BaseType")]
-    pub base_type: Option<String>,
+    pub base_type: String,
     #[serde(rename = "Variant")]
-    pub variant: Option<String>,
+    pub variant: String,
     #[serde(rename = "Links")]
-    pub links: Option<String>,
+    pub links: String,
     #[serde(rename = "Value")]
     pub value: f64,
     #[serde(rename = "Confidence")]
