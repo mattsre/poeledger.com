@@ -60,12 +60,19 @@ export const loader = async ({ request }: LoaderArgs) => {
 		);
 		const records = await dataApiRequest.json();
 
+		const filtersRequest = await fetch(
+			`${backendHost}/filters`,
+		);
+		const filters: string[] = await filtersRequest.json();
+
 		return json({
 			item: getItem,
 			league: desiredLeague,
 			records: records,
+			filters: filters,
 		});
 	}
+
 
 	return json([]);
 };
