@@ -6,6 +6,10 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("an unknown league was encountered")]
+    UnknownLeague,
+    #[error("an unknown confidence value was encountered")]
+    UnknownConfidence,
     #[error("failed parsing a currency price record")]
     InvalidPriceRecord,
 }
@@ -16,6 +20,25 @@ pub enum League {
     Sanctum,
 }
 
+impl FromStr for League {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Sanctum" => Ok(League::Sanctum),
+            _ => Err(Error::UnknownLeague),
+        }
+    }
+}
+
+impl ToString for League {
+    fn to_string(&self) -> String {
+        match self {
+            League::Sanctum => "Sanctum".to_owned(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub enum Confidence {
     High,
@@ -24,64 +47,72 @@ pub enum Confidence {
     Low,
 }
 
+impl FromStr for Confidence {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "High" => Ok(Confidence::High),
+            "Medium" => Ok(Confidence::Medium),
+            "Low" => Ok(Confidence::Low),
+            _ => Err(Error::UnknownConfidence),
+        }
+    }
+}
+
+impl ToString for Confidence {
+    fn to_string(&self) -> String {
+        match self {
+            Confidence::High => "High".to_owned(),
+            Confidence::Medium => "Medium".to_owned(),
+            Confidence::Low => "Low".to_owned(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub struct CurrencyPriceRecord {
+    #[serde(rename = "League")]
     pub league: League,
+    #[serde(rename = "Date")]
     pub date: NaiveDate,
+    #[serde(rename = "Get")]
     pub get: String,
+    #[serde(rename = "Pay")]
     pub pay: String,
-    pub value: f32,
+    #[serde(rename = "Value")]
+    pub value: f64,
+    #[serde(rename = "Confidence")]
     pub confidence: Confidence,
 }
 
-impl TryFrom<String> for CurrencyPriceRecord {
-    type Error = Error;
-
-    fn try_from(value: String) -> Result<Self, Error> {
-        let parts: Vec<&str> = value.split(";").collect();
-
-        let league = match parts.get(0).unwrap() {
-            &"Sanctum" => League::Sanctum,
-            _ => League::default(),
-        };
-
-        let date = NaiveDate::from_str(parts.get(1).unwrap()).unwrap();
-
-        let confidence = match parts.get(5).unwrap() {
-            &"High" => Confidence::High,
-            &"Medium" => Confidence::Medium,
-            &"Low" => Confidence::Low,
-            _ => Confidence::default(),
-        };
-
-        Ok(Self {
-            league,
-            date,
-            get: parts.get(2).unwrap().to_string(),
-            pay: parts.get(3).unwrap().to_string(),
-            value: parts.get(4).unwrap().parse::<f32>().unwrap(),
-            confidence,
-        })
-    }
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+pub struct ItemPriceRecord {
+    #[serde(rename = "League")]
+    pub league: League,
+    #[serde(rename = "Date")]
+    pub date: NaiveDate,
+    #[serde(rename = "Id")]
+    pub id: i64,
+    #[serde(rename = "Type")]
+    pub item_type: String,
+    #[serde(rename = "Name")]
+    pub name: String,
+    #[serde(rename = "BaseType")]
+    pub base_type: Option<String>,
+    #[serde(rename = "Variant")]
+    pub variant: Option<String>,
+    #[serde(rename = "Links")]
+    pub links: Option<String>,
+    #[serde(rename = "Value")]
+    pub value: f64,
+    #[serde(rename = "Confidence")]
+    pub confidence: Confidence,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn currency_price_record_try_from() {
-        let line = "Sanctum;2022-12-10;Sacrifice at Dusk;Chaos Orb;0.9787;High".to_owned();
-        let expected_record = CurrencyPriceRecord {
-            league: League::Sanctum,
-            date: NaiveDate::from_ymd_opt(2022, 12, 10).unwrap(),
-            get: "Sacrifice at Dusk".to_owned(),
-            pay: "Chaos Orb".to_owned(),
-            value: "0.9787".parse::<f32>().unwrap(),
-            confidence: Confidence::High,
-        };
-
-        let parsed_line = CurrencyPriceRecord::try_from(line).expect("line should parse");
-        assert_eq!(expected_record, parsed_line);
-    }
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum PriceRecord {
+    CurrencyPriceRecord(CurrencyPriceRecord),
+    ItemPriceRecord(ItemPriceRecord),
 }

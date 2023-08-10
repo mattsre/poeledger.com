@@ -1,54 +1,88 @@
+use chrono::DateTime;
+use chrono::FixedOffset;
+use chrono::NaiveDate;
+use chrono::NaiveDateTime;
+use chrono::NaiveTime;
+use chrono::TimeZone;
+use chrono::Utc;
+use futures::prelude::*;
+use influxdb2::models::DataPoint;
+use influxdb2::Client;
 use poeledger_economy_data::CurrencyPriceRecord;
+use poeledger_economy_data::ItemPriceRecord;
+use poeledger_economy_data::PriceRecord;
 use std::env;
-use surrealdb::engine::any::Any;
+use std::process::exit;
 
-use serde::Deserialize;
-use surrealdb::opt::auth::Root;
-use surrealdb::sql::Thing;
-use surrealdb::Surreal;
-use tokio::fs::File;
-use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::time::Instant;
-
-static DB: Surreal<Any> = Surreal::init();
-
-#[derive(Debug, Deserialize)]
-struct Record {
-    #[allow(dead_code)]
-    id: Thing,
-}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let surreal_host = env::var("SURREAL_HOST")
-        .expect("SURREAL_HOST must be set and contain the connection protocol (ws | wss)");
-    let surreal_user = env::var("SURREAL_USER").expect("SURREAL_USER must be set");
-    let surreal_pass = env::var("SURREAL_PASS").expect("SURREAL_PASS must be set");
+    let influx_host = env::var("INFLUX_HOST").expect("INFLUX_HOST must be set");
+    let influx_token = env::var("INFLUX_TOKEN").expect("INFLUX_TOKEN must be set");
+    let influx_org = env::var("INFLUX_ORG").unwrap_or("poeledger".to_string());
+    let influx_bucket = env::var("INFLUX_BUCKET").unwrap_or("economy".to_string());
 
-    DB.connect(surreal_host).await?;
-    DB.signin(Root {
-        username: &surreal_user,
-        password: &surreal_pass,
-    })
-    .await?;
+    let influx_client = Client::new(influx_host, influx_org, influx_token);
 
-    DB.use_ns("economy").use_db("economy").await?;
-
-    let file = File::open("Sanctum.currency.csv").await?;
-    let reader = BufReader::new(file);
-
-    let mut lines = reader.lines();
-    lines.next_line().await?;
+    let mut csv_reader = csv::ReaderBuilder::new()
+        .delimiter(b';')
+        .from_path("Sanctum.currency.csv")?;
 
     let start_time = Instant::now();
 
-    let mut line_count = 1;
-    while let Some(line) = lines.next_line().await? {
-        create_price_record(DB.clone(), line).await?;
+    let mut line_count = 0;
+    let max_batch_size = 1000;
+    let mut write_batch: Vec<DataPoint> = Vec::new();
+
+    for result in csv_reader.deserialize() {
+        let record: PriceRecord = result?;
+
+        let datapoint = match record {
+            PriceRecord::CurrencyPriceRecord(r) => match create_datapoint_from_cpr(r) {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("encountered error parsing line: {e}");
+                    exit(1);
+                }
+            },
+            PriceRecord::ItemPriceRecord(r) => match create_datapoint_from_ipr(r) {
+                Ok(d) => d,
+                Err(e) => {
+                    eprintln!("encountered error parsing line: {e}");
+                    exit(1);
+                }
+            },
+        };
+
+        write_batch.push(datapoint);
+
+        if write_batch.len() >= max_batch_size {
+            match influx_client
+                .write(&influx_bucket, stream::iter(write_batch.clone()))
+                .await
+            {
+                Ok(_) => write_batch.clear(),
+                Err(e) => {
+                    eprintln!("failed writing batch to influx with error: {e}");
+                    exit(1);
+                }
+            }
+        }
 
         line_count += 1;
-        if line_count % 500 == 0 {
+        if line_count % max_batch_size == 0 {
             println!("Processed {line_count} price records");
+        }
+    }
+
+    if !write_batch.is_empty() {
+        if let Err(e) = influx_client
+            .write(&influx_bucket, stream::iter(write_batch.clone()))
+            .await
+        {
+            eprintln!("failed writing batch to influx with error: {e}");
+            exit(1);
         }
     }
 
@@ -60,10 +94,46 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn create_price_record(db_client: Surreal<Any>, line: String) -> anyhow::Result<Record> {
-    let record: CurrencyPriceRecord = CurrencyPriceRecord::try_from(line)?;
+fn create_datapoint_from_cpr(record: CurrencyPriceRecord) -> anyhow::Result<DataPoint> {
+    let timestamp = get_nano_timestamp(record.date);
 
-    let created: Record = db_client.create("prices").content(record).await?;
+    let datapoint = DataPoint::builder("currency_price_record")
+        .timestamp(timestamp)
+        .tag("league", record.league.to_string())
+        .tag("get", &record.get)
+        .tag("pay", &record.pay)
+        .tag("confidence", record.confidence.to_string())
+        .field("value", record.value)
+        .build()?;
 
-    Ok(created)
+    Ok(datapoint)
+}
+
+fn create_datapoint_from_ipr(record: ItemPriceRecord) -> anyhow::Result<DataPoint> {
+    let timestamp = get_nano_timestamp(record.date);
+
+    let datapoint = DataPoint::builder("item_price_record")
+        .timestamp(timestamp)
+        .tag("league", record.league.to_string())
+        .tag("id", record.id.to_string())
+        .tag("type", &record.item_type)
+        .tag("name", &record.name)
+        .tag("baseType", &record.base_type.unwrap_or("".to_string()))
+        .tag("variant", &record.variant.unwrap_or("".to_string()))
+        .tag("links", &record.links.unwrap_or("".to_string()))
+        .tag("confidence", &record.confidence.to_string())
+        .field("value", record.value)
+        .build()?;
+
+    Ok(datapoint)
+}
+
+fn get_nano_timestamp(date: NaiveDate) -> i64 {
+    let tz_offset = FixedOffset::east_opt(5 * 3600).unwrap();
+    let time = NaiveTime::from_hms_opt(0, 0, 0).unwrap();
+    let datetime = NaiveDateTime::new(date, time);
+    let dt_with_tz: DateTime<FixedOffset> = tz_offset.from_local_datetime(&datetime).unwrap();
+    let dt_with_tz_utc: DateTime<Utc> = Utc.from_utc_datetime(&dt_with_tz.naive_utc());
+
+    dt_with_tz_utc.timestamp_nanos()
 }

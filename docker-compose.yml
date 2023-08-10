@@ -16,17 +16,22 @@ services:
           path: economy-data-api/src/
         - action: rebuild
           path: economy-data-api/Cargo.toml
-  surrealdb:
+  influxdb:
     build: economy-data-db/
-    entrypoint: 
-      - /surreal 
-      - start 
-      - --user
-      - admin
-      - --pass
-      - admin
-      - file:/.data/surrealdb/economy.db
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=password
+      - DOCKER_INFLUXDB_INIT_ORG=poeledger
+      - DOCKER_INFLUXDB_INIT_BUCKET=economy
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=local-admin-token
     ports:
-      - "8000:8000"
+      - "8086:8086"
     volumes:
-      - ./.data/surrealdb/:/.data/surrealdb/
+      - ./.data/influxdb/:/var/lib/influxdb2/
+  meilisearch:
+    build: economy-search-db/
+    ports:
+      - "7700:7700"
+    volumes:
+      - ./.data/meilisearch/:/meili_data
