@@ -1,26 +1,26 @@
-import { AppShell, Header, Navbar } from "@mantine/core";
-import { json, LoaderArgs, type V2_MetaFunction } from "@remix-run/node";
+import { AppShell, Header } from "@mantine/core";
+import { PriceRecord } from "@poeledger/economy-data";
+import { LoaderArgs, json, type V2_MetaFunction } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import {
-	Chart as ChartJS,
 	CategoryScale,
+	Chart as ChartJS,
+	Legend,
+	LineElement,
 	LinearScale,
 	PointElement,
-	LineElement,
 	Title,
 	Tooltip,
-	Legend,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
 import HeaderWithSearch from "src/components/HeaderWithSearch";
-import SidebarWithFilters from "src/components/SidebarWithFilters";
 
-const recordsToChartData = (data: any): any => {
-	let labels: any = [];
-	let dataset: any = [];
+const recordsToChartData = (data: LoaderResponse): any => {
+	let labels = [];
+	let dataset = [];
 
 	for (let record of data.records) {
-		labels.push(record.date);
+		labels.push(record.date.toString());
 		dataset.push(record.value);
 	}
 
@@ -28,7 +28,7 @@ const recordsToChartData = (data: any): any => {
 		labels,
 		datasets: [
 			{
-				label: data.item,
+				label: data.currentItem,
 				data: dataset,
 				borderColor: "rgb(255, 99, 132)",
 				backgroundColor: "rgba(255, 99, 132, 0.5)",
@@ -47,29 +47,42 @@ export const meta: V2_MetaFunction = () => {
 	];
 };
 
+interface LoaderResponse {
+	currentItem: string
+	currentLeague: string
+	records: PriceRecord[]
+	filters: string[]
+	leagues: string[]
+}
+
 export const loader = async ({ request }: LoaderArgs) => {
 	let backendHost = process.env.BACKEND_HOST;
 
 	if (backendHost) {
 		const url = new URL(request.url);
-		const getItem = url.searchParams.get("get") || "Divine Orb";
-		const desiredLeague = url.searchParams.get("league") || "Sanctum";
+		const currentItem = url.searchParams.get("name") || "Divine Orb";
+		const currentLeague = url.searchParams.get("league") || "Sanctum";
 
-		const dataApiRequest = await fetch(
-			`${backendHost}/prices?get=${getItem}&pay=Chaos%20Orb&league=${desiredLeague}`,
-		);
-		const records = await dataApiRequest.json();
+		const dataApiUri = `${backendHost}/prices?name=${currentItem}&league=${currentLeague}`;
+		const dataApiRequest = await fetch(dataApiUri);
+		const records: PriceRecord[] = await dataApiRequest.json();
 
 		const filtersRequest = await fetch(
 			`${backendHost}/filters`,
 		);
 		const filters: string[] = await filtersRequest.json();
 
+		const leaguesRequest = await fetch(
+			`${backendHost}/leagues`,
+		);
+		const leagues: string[] = await leaguesRequest.json();
+
 		return json({
-			item: getItem,
-			league: desiredLeague,
-			records: records,
-			filters: filters,
+			currentItem,
+			currentLeague,
+			records,
+			filters,
+			leagues
 		});
 	}
 
@@ -88,7 +101,7 @@ ChartJS.register(
 );
 
 export default function Index() {
-	const data = useLoaderData<typeof loader>();
+	const data = useLoaderData<LoaderResponse>();
 	const chartDatasets = recordsToChartData(data);
 
 	return (
@@ -98,11 +111,6 @@ export default function Index() {
 				<Header height={120} p="md">
 					{<HeaderWithSearch />}
 				</Header>
-			}
-			navbar={
-				<Navbar width={{ base: 300 }} height={500} p="md">
-					{<SidebarWithFilters />}
-				</Navbar>
 			}
 		>
 			<Line
@@ -117,7 +125,7 @@ export default function Index() {
 						},
 						title: {
 							display: true,
-							text: `${data.league} - ${data.item} Prices`,
+							text: `${data.currentLeague} - ${data.currentItem} Prices`,
 						},
 					},
 				}}

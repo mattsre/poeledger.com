@@ -1,0 +1,19 @@
+{
+  "name": "@poeledger/economy-data",
+  "version": "0.3.0",
+  "description": "Generated TS bindings from Rust+Typeshare",
+  "main": "generated/lib.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattsre/poeledger.com.git"
+  },
+  "author": "Matt Conway",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mattsre/poeledger.com/issues"
+  },
+  "homepage": "https://github.com/mattsre/poeledger.com#readme"
+}

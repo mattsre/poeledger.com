@@ -7,31 +7,17 @@ services:
       - "5000:5000"
     environment:
       - PORT=5000
-      - SURREAL_HOST=ws://surrealdb:8000
-      - SURREAL_USER=admin
-      - SURREAL_PASS=admin
+      - MONGO_URI=mongodb://admin:password@mongo:27017/
     x-develop:
       watch:
         - action: rebuild
           path: economy-data-api/src/
         - action: rebuild
           path: economy-data-api/Cargo.toml
-  influxdb:
+  mongodb:
     build: economy-data-db/
+    ports:
+      - "27017:27017"
     environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=password
-      - DOCKER_INFLUXDB_INIT_ORG=poeledger
-      - DOCKER_INFLUXDB_INIT_BUCKET=economy
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=local-admin-token
-    ports:
-      - "8086:8086"
-    volumes:
-      - ./.data/influxdb/:/var/lib/influxdb2/
-  meilisearch:
-    build: economy-search-db/
-    ports:
-      - "7700:7700"
-    volumes:
-      - ./.data/meilisearch/:/meili_data
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password

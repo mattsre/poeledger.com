@@ -1,5 +1,4 @@
-import { Button, Container, Flex, Input, Select } from "@mantine/core";
-import { json } from "@remix-run/node";
+import { Flex, Select } from "@mantine/core";
 import { Form, useLoaderData } from "@remix-run/react";
 import Fuse from "fuse.js";
 import { useState } from "react";
@@ -7,12 +6,18 @@ import { useState } from "react";
 
 
 export default function HeaderWithSearch() {
-	const data = useLoaderData()
-	const fuse = new Fuse(data.filters, { threshold: 0.3 });
+	const data = useLoaderData();
+	const fuseFilters = new Fuse(data.filters, { threshold: 0.2 });
+	const fuseLeagues = new Fuse(data.leagues, { threshold: 0.5 });
 	const [filters, setFilters] = useState<string[]>(data.filters)
+	const [leagues, setLeagues] = useState<string[]>(data.leagues)
 
-	function updateSearch(value: string) {
-		setFilters(fuse.search(value).map((item) => item.item) as string[]);
+	function updateFilters(value: string) {
+		setFilters(fuseFilters.search(value).map((item) => item.item) as string[]);
+	}
+
+	function updateLeagues(value: string) {
+		setLeagues(fuseLeagues.search(value).map((item) => item.item) as string[]);
 	}
 
 	function filter(value: string, item: unknown) {
@@ -27,17 +32,19 @@ export default function HeaderWithSearch() {
 				<Flex justify="flex-end" align="center" gap="md">
 					<Select
 						searchable
-						nothingFound="Nothing Found"
-						onSearchChange={updateSearch}
+						onSearchChange={updateFilters}
 						filter={filter}
-						name="get"
-						placeholder={data.item}
+						name="name"
+						placeholder={data.currentItem}
 						data={filters}
 					/>
 					<Select
-						defaultValue={"Sanctum"}
-						placeholder="Leagues"
-						data={[{ value: "Sanctum", label: "Sanctum" }]}
+						searchable
+						onSearchChange={updateLeagues}
+						filter={filter}
+						name="league"
+						placeholder={data.currentLeague}
+						data={leagues}
 					/>
 
 					<input type="submit" hidden></input>

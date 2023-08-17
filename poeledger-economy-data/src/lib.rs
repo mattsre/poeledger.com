@@ -3,6 +3,7 @@ use std::str::FromStr;
 use chrono::NaiveDate;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use typeshare::typeshare;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -10,14 +11,24 @@ pub enum Error {
     UnknownLeague,
     #[error("an unknown confidence value was encountered")]
     UnknownConfidence,
-    #[error("failed parsing a currency price record")]
-    InvalidPriceRecord,
+    #[error("an unknown item link value was encountered")]
+    UnknownItemLinks,
 }
 
+#[typeshare]
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub enum League {
+    Crucible,
     #[default]
     Sanctum,
+    Kalandra,
+    Sentinel,
+    Archnemesis,
+    Scourge,
+    Expedition,
+    Ultimatum,
+    Ritual,
+    Heist,
 }
 
 impl FromStr for League {
@@ -25,7 +36,16 @@ impl FromStr for League {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "Crucible" => Ok(League::Crucible),
             "Sanctum" => Ok(League::Sanctum),
+            "Kalandra" => Ok(League::Kalandra),
+            "Sentinel" => Ok(League::Sentinel),
+            "Archnemesis" => Ok(League::Archnemesis),
+            "Scourge" => Ok(League::Scourge),
+            "Expedition" => Ok(League::Expedition),
+            "Ultimatum" => Ok(League::Ultimatum),
+            "Ritual" => Ok(League::Ritual),
+            "Heist" => Ok(League::Heist),
             _ => Err(Error::UnknownLeague),
         }
     }
@@ -34,11 +54,21 @@ impl FromStr for League {
 impl ToString for League {
     fn to_string(&self) -> String {
         match self {
+            League::Crucible => "Crucible".to_owned(),
             League::Sanctum => "Sanctum".to_owned(),
+            League::Kalandra => "Kalandra".to_owned(),
+            League::Sentinel => "Sentinel".to_owned(),
+            League::Archnemesis => "Archnemesis".to_owned(),
+            League::Scourge => "Scourge".to_owned(),
+            League::Expedition => "Expedition".to_owned(),
+            League::Ultimatum => "Ultimatum".to_owned(),
+            League::Ritual => "Ritual".to_owned(),
+            League::Heist => "Heist".to_owned(),
         }
     }
 }
 
+#[typeshare]
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 pub enum Confidence {
     High,
@@ -70,51 +100,57 @@ impl ToString for Confidence {
     }
 }
 
+#[typeshare]
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
-#[serde(default)]
-pub struct CurrencyPriceRecord {
-    #[serde(rename = "League")]
-    pub league: League,
-    #[serde(rename = "Date")]
-    pub date: NaiveDate,
-    #[serde(rename = "Get")]
-    pub get: String,
-    #[serde(rename = "Pay")]
-    pub pay: String,
-    #[serde(rename = "Value")]
-    pub value: f64,
-    #[serde(rename = "Confidence")]
-    pub confidence: Confidence,
+pub enum ItemLinks {
+    #[default]
+    #[serde(rename = "1-4 links")]
+    OneToFour,
+    #[serde(rename = "5 links")]
+    Five,
+    #[serde(rename = "6 links")]
+    Six,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
-#[serde(default)]
-pub struct ItemPriceRecord {
-    #[serde(rename = "League")]
+impl FromStr for ItemLinks {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "1-4 links" => Ok(ItemLinks::OneToFour),
+            "5 links" => Ok(ItemLinks::Five),
+            "6 links" => Ok(ItemLinks::Six),
+            _ => Err(Error::UnknownItemLinks),
+        }
+    }
+}
+
+impl ToString for ItemLinks {
+    fn to_string(&self) -> String {
+        match self {
+            ItemLinks::OneToFour => "1-4 links".to_owned(),
+            ItemLinks::Five => "5 links".to_owned(),
+            ItemLinks::Six => "6 links".to_owned(),
+        }
+    }
+}
+
+#[typeshare]
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct PriceRecord {
     pub league: League,
-    #[serde(rename = "Date")]
+    pub confidence: Confidence,
     pub date: NaiveDate,
-    #[serde(rename = "Id")]
-    pub id: i64,
-    #[serde(rename = "Type")]
-    pub item_type: String,
-    #[serde(rename = "Name")]
+    pub value: f32,
     pub name: String,
-    #[serde(rename = "BaseType")]
-    pub base_type: String,
-    #[serde(rename = "Variant")]
-    pub variant: String,
-    #[serde(rename = "Links")]
-    pub links: String,
-    #[serde(rename = "Value")]
-    pub value: f64,
-    #[serde(rename = "Confidence")]
-    pub confidence: Confidence,
-}
-
-#[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum PriceRecord {
-    CurrencyPriceRecord(CurrencyPriceRecord),
-    ItemPriceRecord(ItemPriceRecord),
+    #[serde(rename = "itemId")]
+    pub item_id: Option<i32>,
+    #[serde(rename = "itemType")]
+    pub item_type: Option<String>,
+    #[serde(rename = "baseType")]
+    pub base_type: Option<String>,
+    #[serde(rename = "itemVariant")]
+    pub item_variant: Option<String>,
+    #[serde(rename = "itemLinks")]
+    pub item_links: Option<ItemLinks>,
 }

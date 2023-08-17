@@ -1,3 +1,3 @@
-FROM influxdb:latest
-EXPOSE 8086
-CMD ["influxd"]
+FROM mongo:6
+EXPOSE 27017
+CMD ["mongod"]
