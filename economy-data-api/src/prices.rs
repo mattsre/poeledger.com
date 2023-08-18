@@ -24,6 +24,11 @@ pub async fn prices_handler(
     State(state): State<ApiState>,
     query: AxumQuery<PricesQuery>,
 ) -> Json<Vec<PriceRecord>> {
+    tracing::debug!(
+        "handling request for prices with query params: {:#?}",
+        &query
+    );
+
     let economy_collection = state.db.collection::<PriceRecord>("economy");
 
     let name = match query.name.clone() {
@@ -44,10 +49,15 @@ pub async fn prices_handler(
                 records.push(r);
             }
 
+            tracing::debug!(
+                "returning {} documents for this prices query",
+                records.len()
+            );
+
             Json(records)
         }
         Err(e) => {
-            eprintln!("failed querying mongo for prices: {:#?}", e);
+            tracing::error!("failed querying mongo for prices: {:#?}", e);
 
             Json(vec![])
         }
