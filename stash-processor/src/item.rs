@@ -2,7 +2,7 @@ use once_cell::sync::Lazy;
 use poe_types::item::Item;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use surrealdb::sql::Thing;
+use surrealdb::sql::{Datetime, Thing};
 
 #[derive(Debug, Deserialize)]
 pub struct ItemRecord {
@@ -17,6 +17,7 @@ pub struct ItemListing {
     pub price: ComplexPrice,
     pub implicit_mods: Vec<String>,
     pub explicit_mods: Vec<String>,
+    pub last_updated: Datetime,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -61,6 +62,7 @@ impl From<Item> for ItemListing {
             price: price.unwrap_or_default(),
             implicit_mods: item.implicit_mods.unwrap_or_default(),
             explicit_mods: item.explicit_mods.unwrap_or_default(),
+            last_updated: Datetime::default(),
         }
     }
 }

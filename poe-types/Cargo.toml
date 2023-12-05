@@ -2,6 +2,11 @@
 name = "poe-types"
 version = "0.1.0"
 edition = "2021"
+description = "Handwritten Rust types for the Path of Exile API"
+license = "MIT"
+documentation = "https://github.com/mattsre/poeledger.com/tree/main/poe-types"
+homepage = "https://github.com/mattsre/poeledger.com/tree/main/poe-types"
+repository = "https://github.com/mattsre/poeledger.com/tree/main/poe-types"
 
 [dependencies]
 serde = { version = "1.0.193", features = ["derive"] }

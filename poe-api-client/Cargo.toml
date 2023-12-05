@@ -1,10 +1,16 @@
 [package]
 name = "poe-api-client"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
+description = "Client library for the Path of Exile API"
+license = "MIT"
+documentation = "https://github.com/mattsre/poeledger.com/tree/main/poe-api-client"
+homepage = "https://github.com/mattsre/poeledger.com/tree/main/poe-api-client"
+repository = "https://github.com/mattsre/poeledger.com/tree/main/poe-api-client"
+exclude = ["test"]
+
 
 [dependencies]
-async-nats = "0.33.0"
 async-trait = "0.1.74"
 reqwest = { version = "0.11.22", features = ["json"] }
 serde = { version = "1.0.189", features = ["derive"] }
@@ -12,4 +18,4 @@ serde_json = "1.0.107"
 serde_repr = "0.1.16"
 thiserror = "1.0.49"
 tracing = "0.1.40"
-poe-types = { path = "../poe-types" }
+poe-types = { path = "../poe-types", version = "0.1.0" }

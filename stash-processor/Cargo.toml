@@ -13,7 +13,7 @@ tokio = { version = "1.34.0", features = ["full", "tracing"] }
 tokio-stream = "0.1.14"
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
-poe-types = { path = "../poe-types" }
+poe-types = { version = "0.1.0" }
 surrealdb = "1.0.0"
 regex = "1.10.2"
 once_cell = "1.18.0"

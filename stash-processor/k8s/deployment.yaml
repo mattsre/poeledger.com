@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stash-processor
+  labels:
+    app: stash-processor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stash-processor
+  template:
+    metadata:
+      labels:
+        app: stash-processor
+    spec:
+      containers:
+        - name: stash-processor
+          image: stash-processor:latest
+          env:
+            - name: NATS_URL
+              value: "nats://nats:4222"
+            - name: SURREAL_URL
+              value: "surrealdb:8000"
+            - name: SURREAL_USER
+              value: "admin"
+            - name: SURREAL_PASS
+              value: "password"

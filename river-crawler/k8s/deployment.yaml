@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: river-crawler
+  labels:
+    app: river-crawler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: river-crawler
+  template:
+    metadata:
+      labels:
+        app: river-crawler
+    spec:
+      containers:
+        - name: river-crawler
+          image: river-crawler:latest
+          env:
+            - name: CLIENT_ID
+              value: "dev"
+            - name: CLIENT_SECRET
+              value: "dev"
+            - name: USER_AGENT
+              value: "dev"
+            - name: NATS_URL
+              value: "nats://nats:4222"

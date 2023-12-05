@@ -19,11 +19,13 @@ async fn main() -> anyhow::Result<()> {
     let jetstream = jetstream::new(nats);
 
     let surreal_url = env::var("SURREAL_URL").unwrap_or("localhost:8000".to_string());
+    let surreal_user = env::var("SURREAL_USER").unwrap_or("admin".to_string());
+    let surreal_pass = env::var("SURREAL_PASS").unwrap_or("password".to_string());
     let surreal = Surreal::new::<Ws>(surreal_url).await?;
     surreal
         .signin(Root {
-            username: "admin",
-            password: "password",
+            username: &surreal_user,
+            password: &surreal_pass,
         })
         .await?;
     surreal.use_ns("poeledger").use_db("river").await?;
