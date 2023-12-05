@@ -1,0 +1,16 @@
+{
+  "stream_name": "PublicStashStream",
+  "name": "StashProcessor",
+  "config": {
+    "ack_policy": "explicit",
+    "ack_wait": 30000000000,
+    "deliver_policy": "all",
+    "durable_name": "StashProcessor",
+    "name": "StashProcessor",
+    "max_ack_pending": 1000,
+    "max_deliver": -1,
+    "max_waiting": 512,
+    "replay_policy": "instant",
+    "num_replicas": 0
+  }
+}

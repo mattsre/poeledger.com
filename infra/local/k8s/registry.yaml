@@ -1,0 +1,5 @@
+apiVersion: ctlptl.dev/v1alpha1
+kind: Registry
+name: poeledger-registry
+port: 8002
+listenAddress: 127.0.0.1

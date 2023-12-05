@@ -1,0 +1,3 @@
+surrealdb:
+  initial_user: admin
+  initial_pass: password
