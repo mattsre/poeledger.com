@@ -6,6 +6,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 use super::passives::{PassiveGroup, PassiveNode};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum ColourAttr {
     /// Strength
     S,
@@ -22,6 +23,7 @@ pub enum ColourAttr {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum SocketColour {
     /// Red
     R,

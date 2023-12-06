@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use anyhow::bail;
 use async_nats::jetstream;
 use async_trait::async_trait;
 use poe_api_client::ratelimit::limiter::{
@@ -25,19 +26,31 @@ impl NatsRateLimiter {
     }
 
     async fn kv_insert_rule(&self, key: String, rule: Rule) -> anyhow::Result<()> {
-        self.bucket
-            .put(key, serde_json::to_string(&rule)?.into())
-            .await?;
+        if let Err(e) = self
+            .bucket
+            .put(&key, serde_json::to_string(&rule)?.into())
+            .await
+        {
+            tracing::error!("failed to set rule for key: {key} with error: {e}");
+            bail!("failed setting rule");
+        }
 
         Ok(())
     }
 
     async fn kv_get_rule(&self, key: String) -> anyhow::Result<Option<Rule>> {
-        let val = self.bucket.get(key).await?;
-        if let Some(rb) = val {
-            let rule: Rule = serde_json::from_slice(&rb)?;
+        match self.bucket.get(&key).await {
+            Ok(val) => {
+                if let Some(rb) = val {
+                    let rule: Rule = serde_json::from_slice(&rb)?;
 
-            return Ok(Some(rule));
+                    return Ok(Some(rule));
+                }
+            }
+            Err(e) => {
+                tracing::error!("failed to get key: {key} with error: {e}");
+                bail!("failed getting rule");
+            }
         }
 
         Ok(None)
@@ -49,9 +62,15 @@ impl NatsRateLimiter {
         rtypes: Vec<RuleType>,
     ) -> anyhow::Result<()> {
         let key = format!("{}_{}_policy", self.ip, endpoint);
-        self.bucket
-            .put(key, serde_json::to_string(&rtypes)?.into())
-            .await?;
+
+        if let Err(e) = self
+            .bucket
+            .put(&key, serde_json::to_string(&rtypes)?.into())
+            .await
+        {
+            tracing::error!("failed to set rtypes for key: {key} with error: {e}");
+            bail!("failed setting rtypes");
+        }
 
         Ok(())
     }
@@ -62,11 +81,18 @@ impl NatsRateLimiter {
     ) -> anyhow::Result<Option<Vec<RuleType>>> {
         let key = format!("{}_{}_policy", self.ip, endpoint);
 
-        let val = self.bucket.get(key).await?;
-        if let Some(rb) = val {
-            let rtypes: Vec<RuleType> = serde_json::from_slice(&rb)?;
+        match self.bucket.get(&key).await {
+            Ok(val) => {
+                if let Some(rb) = val {
+                    let rtypes: Vec<RuleType> = serde_json::from_slice(&rb)?;
 
-            return Ok(Some(rtypes));
+                    return Ok(Some(rtypes));
+                }
+            }
+            Err(e) => {
+                tracing::error!("failed to get rtypes for key: {key} with error: {e}");
+                bail!("failed getting rtypes");
+            }
         }
 
         Ok(None)
@@ -84,7 +110,15 @@ impl NatsRateLimiter {
 #[async_trait]
 impl RateLimiter for NatsRateLimiter {
     async fn check(&self, endpoint: &str) -> Result<LimiterOutcome, RateLimiterError> {
-        let local_rtypes = self.kv_get_endpoint_rtypes(endpoint).await.unwrap();
+        let local_rtypes = match self.kv_get_endpoint_rtypes(endpoint).await {
+            Ok(rtypes) => rtypes,
+            Err(e) => {
+                tracing::error!("{e}");
+                return Ok(LimiterOutcome::Retry {
+                    after: Duration::from_secs(5),
+                });
+            }
+        };
 
         let mut outcome = LimiterOutcome::Proceed;
         match local_rtypes {
@@ -92,10 +126,20 @@ impl RateLimiter for NatsRateLimiter {
                 for rtype in rtypes {
                     let key = self.generate_remote_key(&rtype, endpoint);
 
-                    if let Some(rule) = self.kv_get_rule(key).await.unwrap() {
-                        if rule.state.current_hits + 1 > rule.ruleset.maximum_hits {
+                    match self.kv_get_rule(key).await {
+                        Ok(ruleopt) => {
+                            if let Some(rule) = ruleopt {
+                                if rule.state.current_hits + 1 > rule.ruleset.maximum_hits {
+                                    outcome = LimiterOutcome::Retry {
+                                        after: Duration::from_secs(rule.ruleset.window as u64),
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("{e}");
                             outcome = LimiterOutcome::Retry {
-                                after: Duration::from_secs(rule.ruleset.window as u64),
+                                after: Duration::from_secs(5),
                             }
                         }
                     }
