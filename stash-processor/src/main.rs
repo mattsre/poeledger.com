@@ -1,14 +1,17 @@
-pub mod item;
+pub mod datastore;
+pub mod listing;
 
 use std::env;
 
 use async_nats::jetstream::{self, consumer::PullConsumer};
 use poe_types::{item::FrameType, stash::PublicStashChange};
-use surrealdb::{engine::remote::ws::Ws, opt::auth::Root, Surreal};
 use tokio_stream::StreamExt;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
-use crate::item::{ItemListing, ItemRecord};
+use crate::{
+    datastore::{Datastore, SurrealDatastore},
+    listing::{ItemListing, ItemListingPriceUpdate},
+};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -18,17 +21,8 @@ async fn main() -> anyhow::Result<()> {
     let nats = async_nats::connect(&nats_url).await?;
     let jetstream = jetstream::new(nats);
 
-    let surreal_url = env::var("SURREAL_URL").unwrap_or("localhost:8000".to_string());
-    let surreal_user = env::var("SURREAL_USER").unwrap_or("admin".to_string());
-    let surreal_pass = env::var("SURREAL_PASS").unwrap_or("password".to_string());
-    let surreal = Surreal::new::<Ws>(surreal_url).await?;
-    surreal
-        .signin(Root {
-            username: &surreal_user,
-            password: &surreal_pass,
-        })
-        .await?;
-    surreal.use_ns("poeledger").use_db("river").await?;
+    let listing_db = SurrealDatastore::new();
+    listing_db.connect().await?;
 
     let stream_name = "PublicStashStream";
     let consumer_name = "StashProcessor";
@@ -46,7 +40,6 @@ async fn main() -> anyhow::Result<()> {
             Ok(m) => {
                 let stash = serde_json::from_slice::<PublicStashChange>(&m.payload)?;
 
-                let table_name = "item_listings";
                 for raw_item in stash.items {
                     let is_priced = raw_item.note.is_some();
                     let is_unique = raw_item.frame_type.as_ref().is_some_and(|f| {
@@ -56,27 +49,22 @@ async fn main() -> anyhow::Result<()> {
                         )
                     });
                     let name_is_empty = raw_item.name.is_empty();
-                    let current_league = "Ancestor";
-                    let is_current_league = raw_item
-                        .league
-                        .as_ref()
-                        .is_some_and(|l| l == current_league);
 
-                    if is_priced && is_unique && !name_is_empty && is_current_league {
+                    if is_priced && is_unique && !name_is_empty {
                         match raw_item.id.clone() {
                             Some(raw_id) => {
-                                let priced_item = ItemListing::from(raw_item);
-
-                                let query: Result<Option<ItemRecord>, surrealdb::Error> = surreal
-                                    .update((table_name, raw_id))
-                                    .content(&priced_item)
-                                    .await;
-
-                                if let Err(e) = query {
-                                    tracing::error!(
-                                        "failed to upsert item: {:#?} with error: {e}",
-                                        &priced_item
-                                    );
+                                if listing_db.exists(&raw_id).await? {
+                                    let price_update = ItemListingPriceUpdate::from(raw_item);
+                                    if let Err(e) = listing_db.update(&raw_id, price_update).await {
+                                        tracing::error!(
+                                            "failed to update listing id: {raw_id} with error: {e}"
+                                        );
+                                    }
+                                } else {
+                                    let new_listing = ItemListing::from(raw_item);
+                                    if let Err(e) = listing_db.create(new_listing).await {
+                                        tracing::error!("failed to create listing: {e}");
+                                    }
                                 }
                             }
                             None => tracing::warn!("ignoring item with null item ID"),

@@ -2,12 +2,7 @@ use once_cell::sync::Lazy;
 use poe_types::item::Item;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use surrealdb::sql::{Datetime, Thing};
-
-#[derive(Debug, Deserialize)]
-pub struct ItemRecord {
-    pub id: Thing,
-}
+use surrealdb::sql::Datetime;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ItemListing {
@@ -17,21 +12,39 @@ pub struct ItemListing {
     pub price: ComplexPrice,
     pub implicit_mods: Vec<String>,
     pub explicit_mods: Vec<String>,
-    pub last_updated: Datetime,
+    pub created_at: Datetime,
+    pub updated_at: Datetime,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+pub struct ItemListingPriceUpdate {
+    pub price: ComplexPrice,
+    pub updated_at: Datetime,
+}
+
+impl From<Item> for ItemListingPriceUpdate {
+    fn from(item: Item) -> Self {
+        let price = note_to_complex_price(&item.note.unwrap());
+
+        Self {
+            price: price.unwrap_or_default(),
+            updated_at: Datetime::default(),
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ComplexPrice {
     /// TODO(stash-processor): value of item normalized to chaos equivalent
     pub normalized_value: f64,
-    /// raw list price
-    pub list_price: f64,
-    /// raw list currency
-    pub list_currency: ListCurrency,
+    /// raw listed price
+    pub listed_price: f64,
+    /// raw listed currency
+    pub listed_currency: ListingCurrency,
 }
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
-pub enum ListCurrency {
+pub enum ListingCurrency {
     Chaos,
     Divine,
     Exalt,
@@ -39,13 +52,13 @@ pub enum ListCurrency {
     Unknown,
 }
 
-impl From<&str> for ListCurrency {
+impl From<&str> for ListingCurrency {
     fn from(value: &str) -> Self {
         match value {
-            "exa" => ListCurrency::Exalt,
-            "divine" => ListCurrency::Divine,
-            "chaos" => ListCurrency::Chaos,
-            _ => ListCurrency::Unknown,
+            "exa" => ListingCurrency::Exalt,
+            "divine" => ListingCurrency::Divine,
+            "chaos" => ListingCurrency::Chaos,
+            _ => ListingCurrency::Unknown,
         }
     }
 }
@@ -62,7 +75,8 @@ impl From<Item> for ItemListing {
             price: price.unwrap_or_default(),
             implicit_mods: item.implicit_mods.unwrap_or_default(),
             explicit_mods: item.explicit_mods.unwrap_or_default(),
-            last_updated: Datetime::default(),
+            created_at: Datetime::default(),
+            updated_at: Datetime::default(),
         }
     }
 }
@@ -87,12 +101,12 @@ pub fn note_to_complex_price(note: &str) -> Option<ComplexPrice> {
                     raw_value = caps.get(2).unwrap().as_str().parse::<f64>().unwrap();
                 }
 
-                let currency = ListCurrency::from(caps.get(3).unwrap().as_str());
+                let currency = ListingCurrency::from(caps.get(3).unwrap().as_str());
 
                 return Some(ComplexPrice {
                     normalized_value: 0 as f64,
-                    list_price: raw_value,
-                    list_currency: currency,
+                    listed_price: raw_value,
+                    listed_currency: currency,
                 });
             }
 
@@ -104,7 +118,7 @@ pub fn note_to_complex_price(note: &str) -> Option<ComplexPrice> {
 
 #[cfg(test)]
 mod tests {
-    use crate::item::ListCurrency;
+    use crate::listing::ListingCurrency;
 
     use super::note_to_complex_price;
 
@@ -114,8 +128,8 @@ mod tests {
         let price = note_to_complex_price(note);
 
         let p = price.expect("should unwrap");
-        assert_eq!(70 as f64, p.list_price);
-        assert_eq!(ListCurrency::Chaos, p.list_currency);
+        assert_eq!(70 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::Chaos, p.listed_currency);
     }
 
     #[test]
@@ -124,8 +138,8 @@ mod tests {
         let price = note_to_complex_price(note);
 
         let p = price.expect("should unwrap");
-        assert_eq!(20 as f64, p.list_price);
-        assert_eq!(ListCurrency::Exalt, p.list_currency);
+        assert_eq!(20 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::Exalt, p.listed_currency);
     }
 
     #[test]
@@ -134,8 +148,8 @@ mod tests {
         let price = note_to_complex_price(note);
 
         let p = price.expect("should unwrap");
-        assert_eq!(10 as f64, p.list_price);
-        assert_eq!(ListCurrency::Divine, p.list_currency);
+        assert_eq!(10 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::Divine, p.listed_currency);
     }
 
     #[test]
@@ -144,8 +158,8 @@ mod tests {
         let price = note_to_complex_price(note);
 
         let p = price.expect("should unwrap");
-        assert_eq!(10 as f64, p.list_price);
-        assert_eq!(ListCurrency::Chaos, p.list_currency);
+        assert_eq!(10 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::Chaos, p.listed_currency);
     }
 
     #[test]
@@ -154,8 +168,8 @@ mod tests {
         let price = note_to_complex_price(note);
 
         let p = price.expect("should unwrap");
-        assert_eq!(0.25 as f64, p.list_price);
-        assert_eq!(ListCurrency::Divine, p.list_currency);
+        assert_eq!(0.25 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::Divine, p.listed_currency);
     }
 
     #[test]
@@ -164,8 +178,8 @@ mod tests {
         let price = note_to_complex_price(note);
 
         let p = price.expect("should unwrap");
-        assert_eq!(0.8 as f64, p.list_price);
-        assert_eq!(ListCurrency::Divine, p.list_currency);
+        assert_eq!(0.8 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::Divine, p.listed_currency);
     }
 
     #[test]
@@ -174,8 +188,8 @@ mod tests {
         let price = note_to_complex_price(note);
 
         let p = price.expect("should unwrap");
-        assert_eq!(3 as f64, p.list_price);
-        assert_eq!(ListCurrency::Unknown, p.list_currency);
+        assert_eq!(3 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::Unknown, p.listed_currency);
     }
 
     #[test]

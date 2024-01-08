@@ -38,26 +38,30 @@ async fn main() -> anyhow::Result<()> {
     while let Some(msg) = messages.next().await {
         match msg {
             Ok(m) => {
-                let (changes, _) = poe_client
-                    .get_public_stashes(Some(from_utf8(&m.payload)?))
-                    .await?;
+                let change_id = from_utf8(&m.payload)?;
+                match poe_client.get_public_stashes(Some(change_id)).await {
+                    Ok((changes, _)) => {
+                        jetstream
+                            .publish("river.changeids".to_owned(), changes.next_change_id.into())
+                            .await?;
 
-                jetstream
-                    .publish("river.changeids".to_owned(), changes.next_change_id.into())
-                    .await?;
+                        if !changes.stashes.is_empty() {
+                            for stash_change in changes.stashes {
+                                if stash_change.public && stash_change.league.is_some() {
+                                    let sc_json = serde_json::to_string(&stash_change)?;
 
-                if !changes.stashes.is_empty() {
-                    for stash_change in changes.stashes {
-                        if stash_change.public && stash_change.league.is_some() {
-                            let sc_json = serde_json::to_string(&stash_change)?;
+                                    jetstream.publish("river.stashes", sc_json.into()).await?;
+                                }
+                            }
+                        }
 
-                            jetstream.publish("river.stashes", sc_json.into()).await?;
+                        if let Err(e) = m.ack().await {
+                            tracing::error!("couldn't ack message: {e}");
                         }
                     }
-                }
-
-                if let Err(e) = m.ack().await {
-                    tracing::error!("couldn't ack message: {e}");
+                    Err(e) => {
+                        tracing::error!("failed getting public stashes for change_id: {change_id} with error: {e}");
+                    }
                 }
             }
             Err(e) => {

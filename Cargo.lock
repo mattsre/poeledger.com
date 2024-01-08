@@ -2500,12 +2500,10 @@ checksum = "14e6ab3f592e6fb464fc9712d8d6e6912de6473954635fd76a589d832cffcbb0"
 
 [[package]]
 name = "poe-api-client"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53810eefa0aa1ba0a0bb398cc0fec33ef46c7a9ffa14dbcfe0527eed70a55e4d"
+version = "0.1.2"
 dependencies = [
  "async-trait",
- "poe-types 0.1.0",
+ "poe-types 0.1.2",
  "reqwest",
  "serde",
  "serde_json",
@@ -2517,9 +2515,11 @@ dependencies = [
 [[package]]
 name = "poe-api-client"
 version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0f30261515b8ad1d0bc52cf79807771c0e751da93f0be4c35c9a9820fad12a4a"
 dependencies = [
  "async-trait",
- "poe-types 0.1.1",
+ "poe-types 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest",
  "serde",
  "serde_json",
@@ -2530,9 +2530,7 @@ dependencies = [
 
 [[package]]
 name = "poe-types"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ad26f4c53c25b14564b873fa9faea783bcaa5330db41c3fb82e7e16c082aaa1"
+version = "0.1.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -2542,7 +2540,9 @@ dependencies = [
 
 [[package]]
 name = "poe-types"
-version = "0.1.1"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8aa34f923049d7d6b2f54ee0ec2c358e802e2d73fd0b998cf6d277db5c29edd"
 dependencies = [
  "serde",
  "serde_json",
@@ -2961,7 +2961,7 @@ dependencies = [
  "async-nats",
  "async-trait",
  "futures",
- "poe-api-client 0.1.1",
+ "poe-api-client 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest",
  "serde",
  "serde_json",
@@ -3649,9 +3649,10 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-nats",
+ "async-trait",
  "futures",
  "once_cell",
- "poe-types 0.1.0",
+ "poe-types 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex",
  "serde",
  "serde_json",

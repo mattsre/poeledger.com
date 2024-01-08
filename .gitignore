@@ -3,3 +3,5 @@ target/
 .env
 
 infra/prod
+history.txt
+fly.toml
