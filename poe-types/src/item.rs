@@ -102,7 +102,7 @@ pub struct Item {
     pub additional_properties: Option<Vec<ItemProperty>>,
     pub next_level_requirements: Option<Vec<ItemProperty>>,
     pub talisman_tier: Option<i64>,
-    pub rewards: Option<ItemRewards>,
+    pub rewards: Option<Vec<ItemRewards>>,
     pub sec_descr_text: Option<String>,
     pub utility_mods: Option<Vec<String>>,
     pub logbook_mods: Option<Vec<LogbookArea>>,
@@ -127,6 +127,7 @@ pub struct Item {
     pub foreseeing: Option<bool>,
     pub incubated_item: Option<Incubator>,
     pub scourged: Option<ScourgeStatus>,
+    #[serde(skip)]
     pub crucible: Option<CrucibleTree>,
     pub ruthless: Option<bool>,
     pub frame_type: Option<FrameType>,
@@ -203,7 +204,7 @@ pub struct ScourgeStatus {
 #[derive(Default, Clone, Deserialize, Serialize)]
 pub struct CrucibleTree {
     pub layout: String,
-    pub nodes: HashMap<String, CrucibleNode>,
+    pub nodes: Vec<CrucibleNode>,
 }
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
