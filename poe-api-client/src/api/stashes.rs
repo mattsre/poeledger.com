@@ -25,5 +25,15 @@ mod tests {
         };
 
         let _: PublicStashesResponse = serde_json::from_reader(file).unwrap();
+
+        let path = Path::new("test/stash-3.json");
+        let display = path.display();
+
+        let file = match File::open(&path) {
+            Err(why) => panic!("couldn't read {}: {}", display, why),
+            Ok(file) => file,
+        };
+
+        let _: PublicStashesResponse = serde_json::from_reader(file).unwrap();
     }
 }
