@@ -7,5 +7,6 @@ members = [
   "poe-types",
   "stash-processor",
   "river-crawler",
+  "price-history-api",
 ]
 resolver = "2"

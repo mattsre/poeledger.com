@@ -43,7 +43,7 @@ pub struct ListingRecord {
 impl SurrealDatastore {
     pub fn new() -> Self {
         Self {
-            listings_table: "item_listings".to_owned(),
+            listings_table: "listings".to_owned(),
         }
     }
 }
@@ -55,7 +55,7 @@ impl Datastore for SurrealDatastore {
         SURREAL_DB
             .connect::<Ws>(&url)
             .await
-            .context("failed connecting to surreal instance at {url}")?;
+            .context(format!("failed connecting to surreal instance at {url}"))?;
 
         let username = env::var("SURREAL_USER").unwrap_or("admin".to_string());
         let password = env::var("SURREAL_PASS").unwrap_or("password".to_string());
@@ -65,7 +65,7 @@ impl Datastore for SurrealDatastore {
                 password: &password,
             })
             .await
-            .context("failed authenticating for user: {username}")?;
+            .context(format!("failed authenticating for user: {username}"))?;
 
         let ns_name = "poeledger";
         let db_name = "river";
@@ -73,7 +73,7 @@ impl Datastore for SurrealDatastore {
             .use_ns(ns_name)
             .use_db(db_name)
             .await
-            .context("failed to use NS {ns_name} and DB {db_name}")?;
+            .context(format!("failed to use NS {ns_name} and DB {db_name}"))?;
 
         Ok(())
     }

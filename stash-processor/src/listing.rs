@@ -1,3 +1,4 @@
+use anyhow::Context;
 use once_cell::sync::Lazy;
 use poe_types::item::Item;
 use regex::Regex;
@@ -22,14 +23,17 @@ pub struct ItemListingPriceUpdate {
     pub updated_at: Datetime,
 }
 
-impl From<Item> for ItemListingPriceUpdate {
-    fn from(item: Item) -> Self {
-        let price = note_to_complex_price(&item.note.unwrap());
+impl TryFrom<Item> for ItemListingPriceUpdate {
+    type Error = anyhow::Error;
 
-        Self {
+    fn try_from(item: Item) -> Result<Self, Self::Error> {
+        let note = item.note.context("items must have a note to be priced")?;
+        let price = note_to_complex_price(&note);
+
+        Ok(Self {
             price: price.unwrap_or_default(),
             updated_at: Datetime::default(),
-        }
+        })
     }
 }
 
@@ -63,27 +67,31 @@ impl From<&str> for ListingCurrency {
     }
 }
 
-impl From<Item> for ItemListing {
-    fn from(item: Item) -> Self {
-        let id = item.id.unwrap();
-        let price = note_to_complex_price(&item.note.unwrap());
+impl TryFrom<Item> for ItemListing {
+    type Error = anyhow::Error;
 
-        Self {
+    fn try_from(item: Item) -> Result<Self, Self::Error> {
+        let id = item.id.context("items are expected to have an id")?;
+        let note = item.note.context("items must have a note to be priced")?;
+        let price = note_to_complex_price(&note);
+
+        Ok(Self {
             name: item.name,
             item_id: id,
-            league: item.league.unwrap(),
+            league: item.league.unwrap_or("Affliction".to_owned()),
             price: price.unwrap_or_default(),
             implicit_mods: item.implicit_mods.unwrap_or_default(),
             explicit_mods: item.explicit_mods.unwrap_or_default(),
             created_at: Datetime::default(),
             updated_at: Datetime::default(),
-        }
+        })
     }
 }
 
 pub fn note_to_complex_price(note: &str) -> Option<ComplexPrice> {
-    static PRICE_REGEXP: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"~(price|b/o) ([\d\.]+(?:/[\d\.]+)?) ([\w-]+)").unwrap());
+    static PRICE_REGEXP: Lazy<Regex> = Lazy::new(|| {
+        Regex::new(r"~(price|b/o) ([\d\.]+(?:/[\d\.]+)?) ([\w-]+)").expect("price regex must parse")
+    });
 
     match PRICE_REGEXP.captures(note) {
         Some(caps) => {
