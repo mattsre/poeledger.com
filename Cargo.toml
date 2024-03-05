@@ -1,7 +1,5 @@
 [workspace]
 members = [
-  "economy-data-api",
-  "economy-data-ingest",
   "poeledger-economy-data",
   "poe-api-client",
   "poe-types",
