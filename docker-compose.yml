@@ -1,0 +1,33 @@
+services:
+  nats:
+    image: "nats:latest"
+    container_name: nats-server
+    hostname: nats-server
+    volumes:
+      - ${PWD}/infra/local/nats/server.conf:/etc/nats/server.conf
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: "--config /etc/nats/server.conf"
+  clickhouse:
+    image: "clickhouse/clickhouse-server:23.4"
+    user: "101:101"
+    container_name: clickhouse
+    hostname: clickhouse
+    volumes:
+      - ${PWD}/infra/local/clickhouse/server/config.xml:/etc/clickhouse-server/config.d/config.xml
+      - ${PWD}/infra/local/clickhouse/server/users.xml:/etc/clickhouse-server/users.d/users.xml
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    depends_on:
+      - clickhouse-keeper
+  clickhouse-keeper:
+    image: "clickhouse/clickhouse-keeper:23.4-alpine"
+    user: "101:101"
+    container_name: clickhouse-keeper
+    hostname: clickhouse-keeper
+    volumes:
+      - ${PWD}/infra/local/clickhouse/keeper/config.xml:/etc/clickhouse-keeper/keeper_config.xml
+    ports:
+      - "9181:9181"

@@ -1,46 +1,50 @@
+use core::fmt;
+
 use anyhow::Context;
 use once_cell::sync::Lazy;
 use poe_types::item::Item;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use surrealdb::sql::Datetime;
+use time::OffsetDateTime;
 
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct ItemListing {
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Listing {
     pub name: String,
     pub item_id: String,
     pub league: String,
     pub price: ComplexPrice,
     pub implicit_mods: Vec<String>,
     pub explicit_mods: Vec<String>,
-    pub created_at: Datetime,
-    pub updated_at: Datetime,
+    pub created_at: OffsetDateTime,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct ItemListingPriceUpdate {
-    pub price: ComplexPrice,
-    pub updated_at: Datetime,
-}
+impl Listing {
+    pub fn new() -> Self {
+        let timestamp = OffsetDateTime::now_utc();
 
-impl TryFrom<Item> for ItemListingPriceUpdate {
-    type Error = anyhow::Error;
-
-    fn try_from(item: Item) -> Result<Self, Self::Error> {
-        let note = item.note.context("items must have a note to be priced")?;
-        let price = note_to_complex_price(&note);
-
-        Ok(Self {
-            price: price.unwrap_or_default(),
-            updated_at: Datetime::default(),
-        })
+        Self {
+            name: Default::default(),
+            item_id: Default::default(),
+            league: Default::default(),
+            price: Default::default(),
+            implicit_mods: Default::default(),
+            explicit_mods: Default::default(),
+            created_at: timestamp,
+        }
     }
 }
 
+impl Default for Listing {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// ComplexPrice contains a normalized value of a listing at the current time of the chaos to divine conversion
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ComplexPrice {
     /// TODO(stash-processor): value of item normalized to chaos equivalent
-    pub normalized_value: f64,
+    pub normalized_price: f64,
     /// raw listed price
     pub listed_price: f64,
     /// raw listed currency
@@ -67,7 +71,18 @@ impl From<&str> for ListingCurrency {
     }
 }
 
-impl TryFrom<Item> for ItemListing {
+impl fmt::Display for ListingCurrency {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ListingCurrency::Chaos => write!(f, "chaos"),
+            ListingCurrency::Divine => write!(f, "divine"),
+            ListingCurrency::Exalt => write!(f, "exa"),
+            ListingCurrency::Unknown => write!(f, "unknown"),
+        }
+    }
+}
+
+impl TryFrom<Item> for Listing {
     type Error = anyhow::Error;
 
     fn try_from(item: Item) -> Result<Self, Self::Error> {
@@ -75,6 +90,7 @@ impl TryFrom<Item> for ItemListing {
         let note = item.note.context("items must have a note to be priced")?;
         let price = note_to_complex_price(&note);
 
+        let timestamp = OffsetDateTime::now_utc();
         Ok(Self {
             name: item.name,
             item_id: id,
@@ -82,8 +98,7 @@ impl TryFrom<Item> for ItemListing {
             price: price.unwrap_or_default(),
             implicit_mods: item.implicit_mods.unwrap_or_default(),
             explicit_mods: item.explicit_mods.unwrap_or_default(),
-            created_at: Datetime::default(),
-            updated_at: Datetime::default(),
+            created_at: timestamp,
         })
     }
 }
@@ -112,7 +127,7 @@ pub fn note_to_complex_price(note: &str) -> Option<ComplexPrice> {
                 let currency = ListingCurrency::from(caps.get(3).unwrap().as_str());
 
                 return Some(ComplexPrice {
-                    normalized_value: 0 as f64,
+                    normalized_price: 0 as f64,
                     listed_price: raw_value,
                     listed_currency: currency,
                 });

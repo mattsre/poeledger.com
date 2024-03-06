@@ -1,4 +1,4 @@
-pub mod datastore;
+pub mod db;
 pub mod listing;
 
 use std::env;
@@ -9,10 +9,7 @@ use poe_types::{item::FrameType, stash::PublicStashChange};
 use tokio_stream::StreamExt;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
-use crate::{
-    datastore::{Datastore, SurrealDatastore},
-    listing::{ItemListing, ItemListingPriceUpdate},
-};
+use crate::listing::Listing;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -24,8 +21,7 @@ async fn main() -> anyhow::Result<()> {
         .context(format!("failed to connect to NATS_URL: {nats_url}"))?;
     let jetstream = jetstream::new(nats);
 
-    let listing_db = SurrealDatastore::new();
-    listing_db.connect().await?;
+    let ch_db = db::ClickhouseDatabase::new();
 
     let stream_name = "PublicStashStream";
     let consumer_name = "StashProcessor";
@@ -60,6 +56,7 @@ async fn main() -> anyhow::Result<()> {
                     }
                 };
 
+                let mut listings_batch = Vec::new();
                 for raw_item in stash.items {
                     let is_priced = raw_item.note.is_some();
                     let is_unique = raw_item.frame_type.as_ref().is_some_and(|f| {
@@ -68,53 +65,23 @@ async fn main() -> anyhow::Result<()> {
                             FrameType::Unique | FrameType::Foil | FrameType::SupporterFoil
                         )
                     });
-                    let name_is_empty = raw_item.name.is_empty();
+                    let name_exists = !raw_item.name.is_empty();
+                    let has_item_id = raw_item.id.is_some();
 
-                    if is_priced && is_unique && !name_is_empty {
-                        match raw_item.id.clone() {
-                            Some(raw_id) => {
-                                let listing_exists = match listing_db.exists(&raw_id).await {
-                                    Ok(l) => l,
-                                    Err(e) => {
-                                        tracing::error!(
-                                            "got an error when checking if a listing existed: {e}"
-                                        );
-
-                                        false
-                                    }
-                                };
-
-                                if listing_exists {
-                                    match ItemListingPriceUpdate::try_from(raw_item) {
-                                        Ok(price_update) => {
-                                            if let Err(e) =
-                                                listing_db.update(&raw_id, price_update).await
-                                            {
-                                                tracing::error!(
-                                                    "failed to update listing id: {raw_id} with error: {e}"
-                                                );
-                                            }
-                                        }
-                                        Err(e) => tracing::error!(
-                                            "failed converting item to a price update: {e}"
-                                        ),
-                                    };
-                                } else {
-                                    match ItemListing::try_from(raw_item) {
-                                        Ok(listing) => {
-                                            if let Err(e) = listing_db.create(listing).await {
-                                                tracing::error!("failed to create listing: {e}");
-                                            }
-                                        }
-                                        Err(e) => tracing::error!(
-                                            "failed converting item to a listing: {e}"
-                                        ),
-                                    };
-                                }
+                    if is_priced && is_unique && name_exists && has_item_id {
+                        match Listing::try_from(raw_item) {
+                            Ok(listing) => {
+                                listings_batch.push(listing);
                             }
-                            None => tracing::warn!("ignoring item with null item ID"),
-                        }
+                            Err(e) => {
+                                tracing::error!("failed converting item to a listing: {e}")
+                            }
+                        };
                     }
+                }
+
+                if let Err(e) = ch_db.create_batch(listings_batch).await {
+                    tracing::error!("failed to create listing: {e}");
                 }
 
                 if let Err(e) = m.ack().await {

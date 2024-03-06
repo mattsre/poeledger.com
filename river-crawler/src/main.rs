@@ -32,9 +32,9 @@ async fn main() -> anyhow::Result<()> {
     let consumer: PullConsumer = jetstream
         .get_consumer_from_stream(&consumer_name, &stream_name)
         .await
-        .expect(&format!(
-            "failed to get consumer: {consumer_name} for stream: {stream_name}"
-        ));
+        .unwrap_or_else(|_| {
+            panic!("failed to get consumer: {consumer_name} for stream: {stream_name}")
+        });
 
     let messages = consumer.messages().await?;
 
