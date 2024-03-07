@@ -4,7 +4,7 @@ mod history;
 use std::{env, time::Duration};
 
 use axum::{routing::get, Router};
-use surrealdb::{engine::remote::ws::Client, Surreal};
+use db::ClickhouseDatabase;
 use tokio::{net::TcpListener, signal};
 use tower_http::{
     cors::{self, CorsLayer},
@@ -15,17 +15,16 @@ use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 #[derive(Clone)]
 pub struct AppState {
-    db: Surreal<Client>,
+    db: ClickhouseDatabase,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     setup_logger();
 
-    let db = db::create_client()
-        .await
-        .expect("DB client must successfully create");
-    let state = AppState { db };
+    let state = AppState {
+        db: ClickhouseDatabase::default(),
+    };
 
     let app = Router::new()
         .route("/history", get(history::history_by_name))
