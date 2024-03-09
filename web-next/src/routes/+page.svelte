@@ -1,53 +1,70 @@
 <script lang="ts">
-  import { PUBLIC_UNDER_CONSTRUCTION } from "$env/static/public";
-
   import type { PageData } from "./$types";
-
   export let data: PageData;
 
-  import { Input } from "$lib/components/ui/input";
-  import { Button } from "$lib/components/ui/button";
-  import { Sun, Moon } from "radix-icons-svelte";
-  import { toggleMode } from "mode-watcher";
-
+  import Header from "$lib/components/header.svelte";
+  import ItemSearch from "./item-search.svelte";
   import Chart from "$lib/components/chart.svelte";
+
+  let chartDataset = data.initialPriceHistory;
+  let formData: any = undefined;
+
+  const handleItemSearch = async () => {
+    if ($formData.item) {
+      const {
+        item,
+        intervalAmount,
+        intervalUnit,
+        tenthQuantile,
+        fifteenthQuantile,
+        thirtiethQuantile,
+        startTime,
+        endTime,
+      } = $formData;
+
+      let historyUrl = `http://localhost:3000/history?item=${item.trim()}`;
+      if (intervalAmount && intervalUnit) {
+        historyUrl = `${historyUrl}&intervalAmount=${intervalAmount}&intervalUnit=${intervalUnit}`;
+      }
+
+      if (startTime && endTime) {
+        historyUrl = `${historyUrl}&startTime=${startTime}&endTime=${endTime}`;
+      }
+
+      if (tenthQuantile) {
+        historyUrl = `${historyUrl}&quantiles=0.1`;
+      }
+
+      if (fifteenthQuantile) {
+        historyUrl = `${historyUrl}&quantiles=0.15`;
+      }
+
+      if (thirtiethQuantile) {
+        historyUrl = `${historyUrl}&quantiles=0.3`;
+      }
+
+      const response = await fetch(historyUrl);
+      if (response.ok) {
+        const jdata = await response.json();
+        console.log(jdata);
+        chartDataset = jdata;
+      } else {
+        console.error(`failed to request to ${historyUrl}`);
+        console.error(response);
+      }
+    }
+  };
 </script>
 
-<div class="m-5">
-  <div class="flex flex-row justify-between">
-    <div class="basis-1/4 font-kanit font-medium text-2xl">PoE Ledger</div>
-    <div class="basis-1/2">
-      <form method="get" class="flex flex-row justify-center gap-5">
-        <Input
-          name="item"
-          class="max-w-lg font-kanit"
-          placeholder="Search uniques..."
-        />
-        <Button class="font-kanit" type="submit">Search</Button>
-      </form>
-    </div>
-    <div class="basis-1/4">
-      <div class="flex justify-end">
-        <Button on:click={toggleMode} variant="outline" size="icon">
-          <Sun
-            class="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"
-          />
-          <Moon
-            class="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
-          />
-          <span class="sr-only">Toggle theme</span>
-        </Button>
-      </div>
-    </div>
-  </div>
+<div class="p-5">
+  <Header />
 
-  <div class="flex justify-center">
-    <div class="relative mt-20" style="width: 80vw; height: 50vh;">
-      {#if PUBLIC_UNDER_CONSTRUCTION === "true"}
-        <h1>UNDER CONSTRUCTION</h1>
-      {:else}
-        <Chart {data} />
-      {/if}
+  <div class="mt-12 grid gap-4 grid-cols-4">
+    <div class="col-span-1" on:submit|preventDefault={handleItemSearch}>
+      <ItemSearch data={data.form} bind:formData />
+    </div>
+    <div class="col-span-3">
+      <Chart data={chartDataset} />
     </div>
   </div>
 </div>
