@@ -1,6 +1,7 @@
 FROM clux/muslrust:stable AS builder
 COPY Cargo.* .
 COPY src/ src/
+RUN ln -s /bin/g++ /bin/musl-g++
 RUN --mount=type=cache,target=/volume/target \
     --mount=type=cache,target=/root/.cargo/registry \
     cargo build --release --bin stash-processor && \

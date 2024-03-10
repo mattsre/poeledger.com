@@ -1,3 +1,5 @@
+import { PUBLIC_API_HOST } from "$env/static/public";
+
 import type { PageServerLoad } from "./$types";
 import { superValidate } from "sveltekit-superforms";
 import { itemSearchFormSchema } from "./schema";
@@ -5,7 +7,7 @@ import { zod } from "sveltekit-superforms/adapters";
  
 export const load: PageServerLoad = async () => {
   let initialPriceHistory = null;
-  const defaultHistoryUrl = "http://localhost:3000/history?item=Headhunter";
+  const defaultHistoryUrl = `${PUBLIC_API_HOST}/history?item=Headhunter`;
   
   const response = await fetch(defaultHistoryUrl);
   if (response.ok) {

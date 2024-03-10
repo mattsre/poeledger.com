@@ -21,7 +21,7 @@ async fn main() -> anyhow::Result<()> {
         .context(format!("failed to connect to NATS_URL: {nats_url}"))?;
     let jetstream = jetstream::new(nats);
 
-    let ch_db = db::ClickhouseDatabase::new();
+    let ch_db = db::ClickhouseDatabase::new().await;
 
     let stream_name = "PublicStashStream";
     let consumer_name = "StashProcessor";

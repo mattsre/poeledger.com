@@ -22,9 +22,8 @@ pub struct AppState {
 async fn main() -> anyhow::Result<()> {
     setup_logger();
 
-    let state = AppState {
-        db: ClickhouseDatabase::default(),
-    };
+    let db = db::ClickhouseDatabase::new().await;
+    let state = AppState { db };
 
     let app = Router::new()
         .route("/history", get(history::history_by_name))

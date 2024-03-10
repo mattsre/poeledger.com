@@ -2,6 +2,7 @@
   import type { PageData } from "./$types";
   export let data: PageData;
 
+  import { PUBLIC_API_HOST } from "$env/static/public";
   import Header from "$lib/components/header.svelte";
   import ItemSearch from "./item-search.svelte";
   import Chart from "$lib/components/chart.svelte";
@@ -22,7 +23,7 @@
         endTime,
       } = $formData;
 
-      let historyUrl = `http://localhost:3000/history?item=${item.trim()}`;
+      let historyUrl = `${PUBLIC_API_HOST}/history?item=${item.trim()}`;
       if (intervalAmount && intervalUnit) {
         historyUrl = `${historyUrl}&intervalAmount=${intervalAmount}&intervalUnit=${intervalUnit}`;
       }
@@ -45,9 +46,7 @@
 
       const response = await fetch(historyUrl);
       if (response.ok) {
-        const jdata = await response.json();
-        console.log(jdata);
-        chartDataset = jdata;
+        chartDataset = await response.json();
       } else {
         console.error(`failed to request to ${historyUrl}`);
         console.error(response);
