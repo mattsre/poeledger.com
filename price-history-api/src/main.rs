@@ -1,5 +1,6 @@
 mod db;
 mod history;
+mod league;
 
 use std::{env, time::Duration};
 
@@ -27,6 +28,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/history", get(history::history_by_name))
+        .route("/leagues", get(league::league_info))
         .layer((
             TraceLayer::new_for_http(),
             TimeoutLayer::new(Duration::from_secs(10)),

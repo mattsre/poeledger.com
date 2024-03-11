@@ -2,23 +2,34 @@ import { PUBLIC_API_HOST } from "$env/static/public";
 
 import type { PageServerLoad } from "./$types";
 import { superValidate } from "sveltekit-superforms";
-import { itemSearchFormSchema } from "./schema";
+import { itemSearchFormSchema } from "$lib/components/item-search.svelte";
 import { zod } from "sveltekit-superforms/adapters";
  
 export const load: PageServerLoad = async () => {
-  let initialPriceHistory = null;
-  const defaultHistoryUrl = `${PUBLIC_API_HOST}/history?item=Headhunter`;
-  
-  const response = await fetch(defaultHistoryUrl);
-  if (response.ok) {
-    initialPriceHistory = await response.json();
-  } else {
-    console.error(`failed to request to ${defaultHistoryUrl}`)
-    console.error(response)
-  }
+  const fetchLeagues = async () => {
+    const response = await fetch(`${PUBLIC_API_HOST}/leagues`);
 
+    if (!response.ok) {
+      console.error(response)
+      return null;
+    }
+
+    return await response.json();
+  };
+
+  const fetchHeadhunterHistory = async () => {
+    const response = await fetch(`${PUBLIC_API_HOST}/history?item=Headhunter`);
+
+    if (!response.ok) {
+      console.error(response)
+    }
+
+    return await response.json();
+  }
+  
   return {
     form: await superValidate(zod(itemSearchFormSchema)),
-    initialPriceHistory,
+    initialPriceHistory: await fetchHeadhunterHistory(),
+    leagues: await fetchLeagues(),
   };
 };

@@ -43,15 +43,18 @@ impl From<Listing> for ListingChRow {
 impl ClickhouseDatabase {
     pub async fn new() -> Self {
         let url = env::var("CLICKHOUSE_URL").unwrap_or("http://localhost:8123".to_string());
-        let user = env::var("CLICKHOUSE_USER").unwrap_or("default".to_string());
-        let password = env::var("CLICKHOUSE_PASSWORD").unwrap_or("pass".to_string());
-        let dbname = "ledger";
 
-        let client = clickhouse::Client::default()
+        let user = env::var("CLICKHOUSE_USER");
+        let password = env::var("CLICKHOUSE_PASSWORD");
+
+        let dbname = "ledger";
+        let mut client = clickhouse::Client::default()
             .with_url(url)
-            .with_user(user)
-            .with_password(password)
             .with_database(dbname);
+
+        if let (Ok(u), Ok(p)) = (user, password) {
+            client = client.with_user(u).with_password(p);
+        }
 
         // ensure client connects to DB
         let qr = client.query("SELECT 1").execute().await;

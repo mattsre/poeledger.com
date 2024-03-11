@@ -53,9 +53,18 @@ pub struct ComplexPrice {
 
 #[derive(Debug, Default, PartialEq, Serialize, Deserialize)]
 pub enum ListingCurrency {
-    Chaos,
-    Divine,
-    Exalt,
+    ChaosOrb,
+    DivineOrb,
+    ExaltedOrb,
+    AwakenedSextant,
+    MirrorOfKalandra,
+    AlchemyOrb,
+    FusingOrb,
+    AnnulmentOrb,
+    ChanceOrb,
+    AlterationOrb,
+    ScouringOrb,
+    RegalOrb,
     #[default]
     Unknown,
 }
@@ -63,9 +72,18 @@ pub enum ListingCurrency {
 impl From<&str> for ListingCurrency {
     fn from(value: &str) -> Self {
         match value {
-            "exa" => ListingCurrency::Exalt,
-            "divine" => ListingCurrency::Divine,
-            "chaos" => ListingCurrency::Chaos,
+            "exa" => ListingCurrency::ExaltedOrb,
+            "divine" => ListingCurrency::DivineOrb,
+            "chaos" => ListingCurrency::ChaosOrb,
+            "awakened-sextant" => ListingCurrency::AwakenedSextant,
+            "mirror" => ListingCurrency::MirrorOfKalandra,
+            "alch" => ListingCurrency::AlchemyOrb,
+            "fusing" => ListingCurrency::FusingOrb,
+            "annul" => ListingCurrency::AnnulmentOrb,
+            "chance" => ListingCurrency::ChanceOrb,
+            "alt" => ListingCurrency::AlterationOrb,
+            "scour" => ListingCurrency::ScouringOrb,
+            "regal" => ListingCurrency::RegalOrb,
             _ => ListingCurrency::Unknown,
         }
     }
@@ -74,9 +92,18 @@ impl From<&str> for ListingCurrency {
 impl fmt::Display for ListingCurrency {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            ListingCurrency::Chaos => write!(f, "chaos"),
-            ListingCurrency::Divine => write!(f, "divine"),
-            ListingCurrency::Exalt => write!(f, "exa"),
+            ListingCurrency::ChaosOrb => write!(f, "chaos"),
+            ListingCurrency::DivineOrb => write!(f, "divine"),
+            ListingCurrency::ExaltedOrb => write!(f, "exa"),
+            ListingCurrency::AwakenedSextant => write!(f, "awakened-sextant"),
+            ListingCurrency::MirrorOfKalandra => write!(f, "mirror"),
+            ListingCurrency::AlchemyOrb => write!(f, "alch"),
+            ListingCurrency::FusingOrb => write!(f, "fusing"),
+            ListingCurrency::AnnulmentOrb => write!(f, "annul"),
+            ListingCurrency::ChanceOrb => write!(f, "chance"),
+            ListingCurrency::AlterationOrb => write!(f, "alt"),
+            ListingCurrency::ScouringOrb => write!(f, "scour"),
+            ListingCurrency::RegalOrb => write!(f, "regal"),
             ListingCurrency::Unknown => write!(f, "unknown"),
         }
     }
@@ -152,7 +179,7 @@ mod tests {
 
         let p = price.expect("should unwrap");
         assert_eq!(70 as f64, p.listed_price);
-        assert_eq!(ListingCurrency::Chaos, p.listed_currency);
+        assert_eq!(ListingCurrency::ChaosOrb, p.listed_currency);
     }
 
     #[test]
@@ -162,7 +189,7 @@ mod tests {
 
         let p = price.expect("should unwrap");
         assert_eq!(20 as f64, p.listed_price);
-        assert_eq!(ListingCurrency::Exalt, p.listed_currency);
+        assert_eq!(ListingCurrency::ExaltedOrb, p.listed_currency);
     }
 
     #[test]
@@ -172,7 +199,7 @@ mod tests {
 
         let p = price.expect("should unwrap");
         assert_eq!(10 as f64, p.listed_price);
-        assert_eq!(ListingCurrency::Divine, p.listed_currency);
+        assert_eq!(ListingCurrency::DivineOrb, p.listed_currency);
     }
 
     #[test]
@@ -182,7 +209,7 @@ mod tests {
 
         let p = price.expect("should unwrap");
         assert_eq!(10 as f64, p.listed_price);
-        assert_eq!(ListingCurrency::Chaos, p.listed_currency);
+        assert_eq!(ListingCurrency::ChaosOrb, p.listed_currency);
     }
 
     #[test]
@@ -192,7 +219,7 @@ mod tests {
 
         let p = price.expect("should unwrap");
         assert_eq!(0.25 as f64, p.listed_price);
-        assert_eq!(ListingCurrency::Divine, p.listed_currency);
+        assert_eq!(ListingCurrency::DivineOrb, p.listed_currency);
     }
 
     #[test]
@@ -202,16 +229,36 @@ mod tests {
 
         let p = price.expect("should unwrap");
         assert_eq!(0.8 as f64, p.listed_price);
-        assert_eq!(ListingCurrency::Divine, p.listed_currency);
+        assert_eq!(ListingCurrency::DivineOrb, p.listed_currency);
     }
 
     #[test]
-    fn unknown_currency_note() {
+    fn alch_currency_note() {
         let note = "~price 3 alch";
         let price = note_to_complex_price(note);
 
         let p = price.expect("should unwrap");
         assert_eq!(3 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::AlchemyOrb, p.listed_currency);
+    }
+
+    #[test]
+    fn mirror_currency_note() {
+        let note = "~price 2 mirror";
+        let price = note_to_complex_price(note);
+
+        let p = price.expect("should unwrap");
+        assert_eq!(2 as f64, p.listed_price);
+        assert_eq!(ListingCurrency::MirrorOfKalandra, p.listed_currency);
+    }
+
+    #[test]
+    fn unknown_currency_note() {
+        let note = "~price 10 offer-gift";
+        let price = note_to_complex_price(note);
+
+        let p = price.expect("should unwrap");
+        assert_eq!(10 as f64, p.listed_price);
         assert_eq!(ListingCurrency::Unknown, p.listed_currency);
     }
 

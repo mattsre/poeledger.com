@@ -8,10 +8,15 @@ use crate::{
     AppState,
 };
 
+const DEFAULT_INTERVAL: ChInterval = ChInterval::Hour(3);
+const DEFAULT_HISTORY_DURATION: Duration = Duration::days(7);
+const DEFAULT_LEAGUE: &str = "Affliction";
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PriceHistoryQuery {
     item: String,
+    league: Option<String>,
     interval_amount: Option<i64>,
     interval_unit: Option<String>,
     quantiles: Option<Vec<String>>,
@@ -23,14 +28,15 @@ pub async fn history_by_name(
     Query(params): Query<PriceHistoryQuery>,
     State(state): State<AppState>,
 ) -> anyhow::Result<impl IntoResponse, StatusCode> {
+    let league = params.league.unwrap_or(DEFAULT_LEAGUE.to_owned());
+
     let interval = match (params.interval_amount, params.interval_unit) {
-        (None, None) => ChInterval::Hour(1),
-        (None, Some(_)) => return Err(StatusCode::BAD_REQUEST),
-        (Some(_), None) => return Err(StatusCode::BAD_REQUEST),
-        (Some(amt), Some(unit)) => {
-            ChInterval::try_from(format!("{amt} {unit}")).unwrap_or(ChInterval::Hour(1))
-        }
-    };
+        (None, None) => Ok(DEFAULT_INTERVAL),
+        (None, Some(unit)) => ChInterval::try_from(format!("{} {unit}", 1)),
+        (Some(amt), None) => ChInterval::try_from(format!("{amt} {}", "hour")),
+        (Some(amt), Some(unit)) => ChInterval::try_from(format!("{amt} {unit}")),
+    }
+    .unwrap_or(DEFAULT_INTERVAL);
 
     let quantiles = match params.quantiles {
         Some(q) => {
@@ -47,13 +53,13 @@ pub async fn history_by_name(
     let timeframe = match (params.start_time, params.end_time) {
         (None, None) => ChTimeframe {
             start: OffsetDateTime::now_utc()
-                .saturating_sub(Duration::days(7))
+                .saturating_sub(DEFAULT_HISTORY_DURATION)
                 .unix_timestamp(),
             end: OffsetDateTime::now_utc().unix_timestamp(),
         },
         (None, Some(end)) => ChTimeframe {
             start: OffsetDateTime::now_utc()
-                .saturating_sub(Duration::days(7))
+                .saturating_sub(DEFAULT_HISTORY_DURATION)
                 .unix_timestamp(),
             end,
         },
@@ -66,7 +72,7 @@ pub async fn history_by_name(
 
     match state
         .db
-        .query_ledger_by_name(&params.item, interval, quantiles, timeframe)
+        .query_ledger_by_name(&params.item, &league, interval, quantiles, timeframe)
         .await
     {
         Ok(results) => Ok(Json(results)),

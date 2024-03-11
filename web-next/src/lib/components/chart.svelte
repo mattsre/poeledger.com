@@ -47,13 +47,11 @@
       Chart.defaults.font.family = "Kanit";
       Chart.defaults.font.size = 14;
 
-      let { labels, prices, subtitleText } = formatDataForChart(data);
-
       chartInstance = new Chart(ctx, {
         type: "line",
         data: {
-          labels,
-          datasets: prices,
+          labels: [],
+          datasets: [],
         },
         options: {
           maintainAspectRatio: true,
@@ -69,28 +67,37 @@
               },
             },
           },
-          plugins: {
-            subtitle: {
-              display: true,
-              text: subtitleText,
-              font: {
-                size: 20,
-              },
-            },
-          },
         },
       });
+
+      if (data.length && data.length > 0) {
+        let { labels, prices, subtitleText } = formatDataForChart(data);
+
+        chartInstance.data.labels = labels;
+        chartInstance.data.datasets = prices;
+        chartInstance.options.plugins!.subtitle = {
+          display: true,
+          text: subtitleText,
+          font: {
+            size: 20,
+          },
+        };
+      }
     }
   };
 
   const updateChartData = () => {
-    let { labels, prices, subtitleText } = formatDataForChart(data);
+    if (data.length && data.length > 0) {
+      let { labels, prices, subtitleText } = formatDataForChart(data);
 
-    chartInstance.data.labels = labels;
-    chartInstance.data.datasets = prices;
-    chartInstance.options.plugins!.subtitle!.text = subtitleText;
+      chartInstance.data.labels = labels;
+      chartInstance.data.datasets = prices;
+      chartInstance.options.plugins!.subtitle!.text = subtitleText;
 
-    chartInstance.update();
+      chartInstance.update();
+    } else {
+      console.warn("recieved empty price history: ", data);
+    }
   };
 
   const formatDataForChart = (chartData: any) => {

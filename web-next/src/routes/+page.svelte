@@ -4,44 +4,45 @@
 
   import { PUBLIC_API_HOST } from "$env/static/public";
   import Header from "$lib/components/header.svelte";
-  import ItemSearch from "./item-search.svelte";
   import Chart from "$lib/components/chart.svelte";
+  import ItemSearch, {
+    type ItemSearchFormData,
+  } from "$lib/components/item-search.svelte";
 
   let chartDataset = data.initialPriceHistory;
   let formData: any = undefined;
 
   const handleItemSearch = async () => {
     if ($formData.item) {
-      const {
-        item,
-        intervalAmount,
-        intervalUnit,
-        tenthQuantile,
-        fifteenthQuantile,
-        thirtiethQuantile,
-        startTime,
-        endTime,
-      } = $formData;
+      const fd: ItemSearchFormData = $formData;
 
-      let historyUrl = `${PUBLIC_API_HOST}/history?item=${item.trim()}`;
-      if (intervalAmount && intervalUnit) {
-        historyUrl = `${historyUrl}&intervalAmount=${intervalAmount}&intervalUnit=${intervalUnit}`;
+      let historyUrl = `${PUBLIC_API_HOST}/history?item=${fd.item.trim()}&league=${fd.league}`;
+      if (fd.intervalAmount && fd.intervalUnit) {
+        historyUrl = `${historyUrl}&intervalAmount=${fd.intervalAmount}&intervalUnit=${fd.intervalUnit}`;
       }
 
-      if (startTime && endTime) {
-        historyUrl = `${historyUrl}&startTime=${startTime}&endTime=${endTime}`;
+      if (fd.startTime && fd.endTime) {
+        historyUrl = `${historyUrl}&startTime=${fd.startTime}&endTime=${fd.endTime}`;
       }
 
-      if (tenthQuantile) {
+      if (fd.tenthQuantile) {
         historyUrl = `${historyUrl}&quantiles=0.1`;
       }
 
-      if (fifteenthQuantile) {
+      if (fd.fifteenthQuantile) {
         historyUrl = `${historyUrl}&quantiles=0.15`;
       }
 
-      if (thirtiethQuantile) {
+      if (fd.thirtiethQuantile) {
         historyUrl = `${historyUrl}&quantiles=0.3`;
+      }
+
+      if (fd.customQuantiles.length > 0) {
+        for (let q of fd.customQuantiles) {
+          let floatQ = (q as number) / 100;
+
+          historyUrl = `${historyUrl}&quantiles=${floatQ}`;
+        }
       }
 
       const response = await fetch(historyUrl);
@@ -55,12 +56,16 @@
   };
 </script>
 
+<svelte:head>
+  <title>PoE Ledger | Item Price History</title>
+</svelte:head>
+
 <div class="p-5">
   <Header />
 
   <div class="mt-12 grid gap-4 grid-cols-4">
     <div class="col-span-1" on:submit|preventDefault={handleItemSearch}>
-      <ItemSearch data={data.form} bind:formData />
+      <ItemSearch data={data.form} bind:formData leagues={data.leagues} />
     </div>
     <div class="col-span-3">
       <Chart data={chartDataset} />
