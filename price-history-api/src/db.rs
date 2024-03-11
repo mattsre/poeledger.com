@@ -144,7 +144,7 @@ impl ClickhouseDatabase {
                 arrayZip([{quants}], quantiles({quants})(listed_price)) AS price_by_quantile,
                 listed_currency
             FROM ledger.listings
-            WHERE name = ? AND league = ? AND created_at BETWEEN {start} AND {end}
+            WHERE name ilike ? AND league = ? AND created_at BETWEEN {start} AND {end}
             GROUP BY interval_bucket, name, listed_currency
             ORDER BY interval_bucket",
             interval.to_string()
