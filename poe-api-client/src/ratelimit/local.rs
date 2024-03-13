@@ -28,8 +28,7 @@ impl RateLimiter for LocalRateLimiter {
             Err(e) => match e {
                 TryLockError::Poisoned(_) => return Err(RateLimiterError::InternalError),
                 TryLockError::WouldBlock => {
-                    println!("waiting for lock");
-                    todo!();
+                    unimplemented!();
                 }
             },
         };
@@ -55,8 +54,7 @@ impl RateLimiter for LocalRateLimiter {
             Err(e) => match e {
                 TryLockError::Poisoned(_) => return Err(RateLimiterError::InternalError),
                 TryLockError::WouldBlock => {
-                    println!("waiting for lock");
-                    todo!();
+                    unimplemented!();
                 }
             },
         };

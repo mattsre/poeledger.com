@@ -38,7 +38,7 @@ impl<L: RateLimiter> Client<L> {
             }
         };
 
-        let response = request.send().await.map_err(ClientError::ReqwestError)?;
+        let response = request.send().await.map_err(ClientError::SendFailed)?;
 
         let headers = response.headers();
         if headers.get("x-rate-limit-policy").is_some() {
@@ -56,36 +56,32 @@ impl<L: RateLimiter> Client<L> {
 
             let mut rules: Vec<Rule> = Vec::new();
             for rr in rules_raw {
-                let ruleset = RuleSet::try_from(
-                    headers
-                        .get(format!("x-rate-limit-{rr}"))
-                        .unwrap()
-                        .to_str()
-                        .unwrap(),
-                )
-                .unwrap();
+                if let (Some(rset), Some(rstate)) = (
+                    headers.get(format!("x-rate-limit-{rr}")),
+                    headers.get(format!("x-rate-limit-{rr}-state")),
+                ) {
+                    let ruleset = RuleSet::try_from(rset.to_str().unwrap())
+                        .map_err(ClientError::RateLimiterRuleError)?;
 
-                let rulestate = RuleState::try_from(
-                    headers
-                        .get(format!("x-rate-limit-{rr}-state"))
-                        .unwrap()
-                        .to_str()
-                        .unwrap(),
-                )
-                .unwrap();
+                    let rulestate = RuleState::try_from(rstate.to_str().unwrap())
+                        .map_err(ClientError::RateLimiterRuleError)?;
 
-                let rule = Rule {
-                    rtype: rr,
-                    ruleset,
-                    state: rulestate,
-                };
+                    let rule = Rule {
+                        rtype: rr,
+                        ruleset,
+                        state: rulestate,
+                    };
 
-                rules.push(rule);
+                    rules.push(rule);
+                }
             }
 
             let policy = Policy { rules };
 
-            self.limiter.update(endpoint, policy).await.unwrap();
+            self.limiter
+                .update(endpoint, policy)
+                .await
+                .map_err(ClientError::RateLimiterRuleError)?;
         };
 
         Ok(response)

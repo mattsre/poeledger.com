@@ -3,7 +3,7 @@ pub mod fetch;
 pub mod ratelimit;
 
 use api::stashes::PublicStashesResponse;
-use ratelimit::limiter::RateLimiter;
+use ratelimit::limiter::{RateLimiter, RateLimiterError};
 use reqwest::{
     header::{HeaderMap, HeaderValue, ACCEPT},
     StatusCode,
@@ -16,10 +16,14 @@ pub type HttpStatusCode = StatusCode;
 pub enum ClientError {
     #[error("encountered error with HTTP status code: {0}")]
     HttpError(StatusCode),
-    #[error("reqwest failed to process: {0}")]
-    ReqwestError(#[from] reqwest::Error),
+    #[error("reqwest failed to send request: {0}")]
+    SendFailed(reqwest::Error),
+    #[error("reqwest couldn't deserialize body: {0}")]
+    DeserializeError(reqwest::Error),
     #[error("encountered rate limit")]
     RateLimited,
+    #[error("failed processing rate limiter rules: {0}")]
+    RateLimiterRuleError(RateLimiterError),
     #[error("failed to authenticate or authentication was rejected")]
     AuthError,
     #[error("invalid request")]
@@ -73,7 +77,7 @@ impl<L: RateLimiter> Client<L> {
                 let body = response
                     .json::<serde_json::Value>()
                     .await
-                    .map_err(ClientError::ReqwestError)?;
+                    .map_err(ClientError::DeserializeError)?;
 
                 self.access_token = Some(body["access_token"].as_str().unwrap().to_owned());
 
@@ -108,12 +112,12 @@ impl<L: RateLimiter> Client<L> {
                 let body = response
                     .json::<PublicStashesResponse>()
                     .await
-                    .map_err(ClientError::ReqwestError)?;
+                    .map_err(ClientError::DeserializeError)?;
 
                 Ok((body, status))
             }
             StatusCode::UNAUTHORIZED => {
-                println!("unauthorized. debug headers: {:#?}", response.headers());
+                tracing::warn!("unauthorized. debug headers: {:#?}", response.headers());
 
                 Err(ClientError::AuthError)
             }

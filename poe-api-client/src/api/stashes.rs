@@ -16,24 +16,34 @@ mod tests {
 
     #[test]
     fn deserialize_stash_response() {
-        let path = Path::new("test/stash.json");
+        let path = Path::new("test/stash-1.json");
         let display = path.display();
 
-        let file = match File::open(&path) {
+        let file1 = match File::open(&path) {
             Err(why) => panic!("couldn't read {}: {}", display, why),
-            Ok(file) => file,
+            Ok(f) => f,
         };
 
-        let _: PublicStashesResponse = serde_json::from_reader(file).unwrap();
+        let _: PublicStashesResponse = serde_json::from_reader(file1).unwrap();
+
+        let path = Path::new("test/stash-2.json");
+        let display = path.display();
+
+        let file2 = match File::open(&path) {
+            Err(why) => panic!("couldn't read {}: {}", display, why),
+            Ok(f) => f,
+        };
+
+        let _: PublicStashesResponse = serde_json::from_reader(file2).unwrap();
 
         let path = Path::new("test/stash-3.json");
         let display = path.display();
 
-        let file = match File::open(&path) {
+        let file3 = match File::open(&path) {
             Err(why) => panic!("couldn't read {}: {}", display, why),
-            Ok(file) => file,
+            Ok(f) => f,
         };
 
-        let _: PublicStashesResponse = serde_json::from_reader(file).unwrap();
+        let _: PublicStashesResponse = serde_json::from_reader(file3).unwrap();
     }
 }
