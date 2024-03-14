@@ -115,7 +115,7 @@ impl TryFrom<Item> for Listing {
     fn try_from(item: Item) -> Result<Self, Self::Error> {
         let id = item.id.context("items are expected to have an id")?;
         let note = item.note.context("items must have a note to be priced")?;
-        let price = note_to_complex_price(&note);
+        let price = note_to_complex_price(&note)?;
 
         let timestamp = OffsetDateTime::now_utc();
         Ok(Self {
@@ -130,7 +130,7 @@ impl TryFrom<Item> for Listing {
     }
 }
 
-pub fn note_to_complex_price(note: &str) -> Option<ComplexPrice> {
+pub fn note_to_complex_price(note: &str) -> anyhow::Result<Option<ComplexPrice>> {
     static PRICE_REGEXP: Lazy<Regex> = Lazy::new(|| {
         Regex::new(r"~(price|b/o) ([\d\.]+(?:/[\d\.]+)?) ([\w-]+)").expect("price regex must parse")
     });
@@ -141,28 +141,33 @@ pub fn note_to_complex_price(note: &str) -> Option<ComplexPrice> {
                 let mut raw_value = 0 as f64;
 
                 if let Some((num, denom)) = caps.get(2).unwrap().as_str().split_once('/') {
-                    let raw_num = num.parse::<f64>().unwrap();
-                    let raw_denom = denom.parse::<f64>().unwrap();
+                    let raw_num = num
+                        .parse::<f64>()
+                        .context("failed parsing numerator: {num} to f64")?;
+                    let raw_denom = denom
+                        .parse::<f64>()
+                        .context("failed parsing denominator: {denom} to f64")?;
 
                     if raw_denom > 0 as f64 {
                         raw_value = raw_num / raw_denom;
                     }
                 } else {
-                    raw_value = caps.get(2).unwrap().as_str().parse::<f64>().unwrap();
+                    raw_value = caps.get(2).unwrap().as_str().parse::<f64>()?;
                 }
 
-                let currency = ListingCurrency::from(caps.get(3).unwrap().as_str());
+                let currency_string = caps.get(3).unwrap().as_str();
+                let currency = ListingCurrency::from(currency_string);
 
-                return Some(ComplexPrice {
+                return Ok(Some(ComplexPrice {
                     normalized_price: 0 as f64,
                     listed_price: raw_value,
                     listed_currency: currency,
-                });
+                }));
             }
 
-            None
+            Ok(None)
         }
-        None => None,
+        None => Ok(None),
     }
 }
 
@@ -175,7 +180,7 @@ mod tests {
     #[test]
     fn simple_chaos_note() {
         let note = "~price 70 chaos";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(70 as f64, p.listed_price);
@@ -185,7 +190,7 @@ mod tests {
     #[test]
     fn simple_exalt_note() {
         let note = "~price 20 exa";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(20 as f64, p.listed_price);
@@ -195,7 +200,7 @@ mod tests {
     #[test]
     fn simple_divine_note() {
         let note = "~b/o 10 divine";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(10 as f64, p.listed_price);
@@ -205,7 +210,7 @@ mod tests {
     #[test]
     fn fractional_chaos_note() {
         let note = "~price 100/10 chaos";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(10 as f64, p.listed_price);
@@ -215,7 +220,7 @@ mod tests {
     #[test]
     fn fractional_divine_note() {
         let note = "~price 5/20 divine";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(0.25 as f64, p.listed_price);
@@ -225,7 +230,7 @@ mod tests {
     #[test]
     fn float_divine_note() {
         let note = "~price 0.8 divine";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(0.8 as f64, p.listed_price);
@@ -235,7 +240,7 @@ mod tests {
     #[test]
     fn alch_currency_note() {
         let note = "~price 3 alch";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(3 as f64, p.listed_price);
@@ -245,7 +250,7 @@ mod tests {
     #[test]
     fn mirror_currency_note() {
         let note = "~price 2 mirror";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(2 as f64, p.listed_price);
@@ -255,7 +260,7 @@ mod tests {
     #[test]
     fn unknown_currency_note() {
         let note = "~price 10 offer-gift";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         let p = price.expect("should unwrap");
         assert_eq!(10 as f64, p.listed_price);
@@ -265,7 +270,7 @@ mod tests {
     #[test]
     fn invalid_note() {
         let note = "random note on item";
-        let price = note_to_complex_price(note);
+        let price = note_to_complex_price(note).expect("should parse");
 
         assert!(price.is_none());
     }

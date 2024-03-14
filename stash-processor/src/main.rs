@@ -69,12 +69,18 @@ async fn main() -> anyhow::Result<()> {
                     let has_item_id = raw_item.id.is_some();
 
                     if is_priced && is_unique && name_exists && has_item_id {
-                        match Listing::try_from(raw_item) {
+                        match Listing::try_from(raw_item.clone()) {
                             Ok(listing) => {
                                 listings_batch.push(listing);
                             }
                             Err(e) => {
-                                tracing::error!("failed converting item to a listing: {e}")
+                                tracing::error!("failed converting item to a listing: {e}");
+
+                                if let Ok(item_json) = serde_json::to_string(&raw_item) {
+                                    let _ = jetstream
+                                        .publish("river.failed_items", item_json.into())
+                                        .await;
+                                }
                             }
                         };
                     }
