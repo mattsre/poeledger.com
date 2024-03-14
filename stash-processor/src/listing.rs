@@ -152,7 +152,10 @@ pub fn note_to_complex_price(note: &str) -> anyhow::Result<Option<ComplexPrice>>
                         raw_value = raw_num / raw_denom;
                     }
                 } else {
-                    raw_value = caps.get(2).unwrap().as_str().parse::<f64>()?;
+                    let raw_price_string = caps.get(2).unwrap().as_str();
+                    raw_value = raw_price_string
+                        .parse::<f64>()
+                        .context("failed parsing price: {raw_price_string} to f64")?;
                 }
 
                 let currency_string = caps.get(3).unwrap().as_str();
