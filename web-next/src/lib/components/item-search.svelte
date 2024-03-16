@@ -40,9 +40,10 @@
   import { Switch } from "$lib/components/ui/switch";
   import { zodClient } from "sveltekit-superforms/adapters";
   import { Button } from "$lib/components/ui/button";
-  import { ChevronDown, Cross2 } from "radix-icons-svelte";
+  import { ChevronDown, Cross2 } from "svelte-radix";
   import { tick } from "svelte";
   import { cn } from "$lib/utils";
+  import Searchbar from "$lib/components/searchbar.svelte";
 
   export let data: SuperValidated<Infer<ItemSearchFormSchema>>;
   export let leagues: any;
@@ -87,13 +88,7 @@
 <form id="item-search" class="flex flex-col gap-5 max-w-md">
   <h1 class="font-kanit font-medium text-lg">Item Search</h1>
 
-  <Form.Field {form} name="item" class="font-kanit">
-    <Form.Control let:attrs>
-      <Form.Label>Item Name</Form.Label>
-      <Input {...attrs} bind:value={$formData.item} />
-    </Form.Control>
-    <Form.FieldErrors />
-  </Form.Field>
+  <Searchbar {form} searchIndex="uniques" />
 
   <Form.Field {form} name="league" class="font-kanit">
     <Form.Control let:attrs>

@@ -1,5 +1,6 @@
 pub mod db;
 pub mod listing;
+pub mod search;
 
 use std::env;
 
@@ -22,6 +23,7 @@ async fn main() -> anyhow::Result<()> {
     let jetstream = jetstream::new(nats);
 
     let ch_db = db::ClickhouseDatabase::new().await;
+    let meili_handler = search::MeilisearchHandler::new().await;
 
     let stream_name = "PublicStashStream";
     let consumer_name = "StashProcessor";
@@ -49,7 +51,7 @@ async fn main() -> anyhow::Result<()> {
                         }
 
                         if let Err(e) = m.ack_with(jetstream::AckKind::Term).await {
-                            tracing::error!("failed to ack unprocessable stash message: {e}");
+                            tracing::error!("failed to ack unprocessable stash: {e}");
                         }
 
                         continue;
@@ -86,13 +88,27 @@ async fn main() -> anyhow::Result<()> {
                     }
                 }
 
-                if let Err(e) = ch_db.create_batch(listings_batch).await {
-                    tracing::error!("failed to create listing: {e}");
-                }
+                match ch_db.create_batch(&listings_batch).await {
+                    Ok(_) => {
+                        if let Err(e) = meili_handler
+                            .add_document_batch("uniques", &listings_batch)
+                            .await
+                        {
+                            tracing::error!("failed to index a batch of uniques: {e}");
+                        }
 
-                if let Err(e) = m.ack().await {
-                    tracing::error!("couldn't ack message: {e}");
-                }
+                        if let Err(e) = m.ack().await {
+                            tracing::error!("couldn't ack message: {e}");
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("failed to add listings to the DB: {e}");
+
+                        if let Err(e) = m.ack_with(jetstream::AckKind::Term).await {
+                            tracing::error!("failed to ack unprocessable stash: {e}");
+                        }
+                    }
+                };
             }
             Err(e) => {
                 tracing::error!("failed to read item: {e}");

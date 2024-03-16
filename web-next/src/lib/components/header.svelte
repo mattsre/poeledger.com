@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button";
-  import { Sun, Moon } from "radix-icons-svelte";
+  import { Sun, Moon } from "svelte-radix";
   import { mode, setMode } from "mode-watcher";
 
   const toggleTheme = (e: MouseEvent) => {

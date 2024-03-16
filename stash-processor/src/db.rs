@@ -24,17 +24,17 @@ pub struct ListingChRow {
     pub created_at: OffsetDateTime,
 }
 
-impl From<Listing> for ListingChRow {
-    fn from(l: Listing) -> Self {
+impl From<&Listing> for ListingChRow {
+    fn from(l: &Listing) -> Self {
         Self {
-            item_id: l.item_id,
-            name: l.name,
-            league: l.league,
+            item_id: l.item_id.clone(),
+            name: l.name.clone(),
+            league: l.league.clone(),
             normalized_price: l.price.normalized_price,
             listed_price: l.price.listed_price,
             listed_currency: l.price.listed_currency.to_string(),
-            implicit_mods: l.implicit_mods,
-            explicit_mods: l.explicit_mods,
+            implicit_mods: l.implicit_mods.clone(),
+            explicit_mods: l.explicit_mods.clone(),
             created_at: l.created_at,
         }
     }
@@ -42,7 +42,7 @@ impl From<Listing> for ListingChRow {
 
 impl ClickhouseDatabase {
     pub async fn new() -> Self {
-        let url = env::var("CLICKHOUSE_URL").unwrap_or("http://localhost:8123".to_string());
+        let url = env::var("CLICKHOUSE_URL").unwrap_or("http://localhost:8123".to_owned());
 
         let user = env::var("CLICKHOUSE_USER");
         let password = env::var("CLICKHOUSE_PASSWORD");
@@ -56,16 +56,15 @@ impl ClickhouseDatabase {
             client = client.with_user(u).with_password(p);
         }
 
-        // ensure client connects to DB
-        let qr = client.query("SELECT 1").execute().await;
-        if let Err(e) = qr {
-            tracing::error!("failed to connect to DB: {e}");
+        // ensure client connects to Clickhouse
+        if let Err(e) = client.query("SELECT 1").execute().await {
+            tracing::error!("failed to connect to Clickhouse: {e}");
             tracing::error!("exiting!");
 
             std::process::exit(1);
         }
 
-        tracing::info!("connected to DB!");
+        tracing::info!("connected to Clickhouse!");
 
         Self { client }
     }
@@ -91,7 +90,7 @@ impl ClickhouseDatabase {
         }
     }
 
-    pub async fn create_batch(&self, listings: Vec<Listing>) -> anyhow::Result<()> {
+    pub async fn create_batch(&self, listings: &Vec<Listing>) -> anyhow::Result<()> {
         let mut insert = self.client.insert("listings")?;
 
         for l in listings {
