@@ -18,6 +18,7 @@ pub fn are_valid_quantiles(quantiles: &Vec<f64>) -> bool {
 pub enum ChInterval {
     Minute(i32),
     Hour(i32),
+    Day(i32),
     Week(i32),
     Month(i32),
     Year(i32),
@@ -37,6 +38,7 @@ impl TryFrom<String> for ChInterval {
             let interval = match unit {
                 "minute" => ChInterval::Minute(xi),
                 "hour" => ChInterval::Hour(xi),
+                "day" => ChInterval::Day(xi),
                 "week" => ChInterval::Week(xi),
                 "month" => ChInterval::Month(xi),
                 "year" => ChInterval::Year(xi),
@@ -58,6 +60,7 @@ impl ToString for ChInterval {
         match self {
             ChInterval::Minute(x) => format!("{x} minute"),
             ChInterval::Hour(x) => format!("{x} hour"),
+            ChInterval::Day(x) => format!("{x} day"),
             ChInterval::Week(x) => format!("{x} week"),
             ChInterval::Month(x) => format!("{x} month"),
             ChInterval::Year(x) => format!("{x} year"),

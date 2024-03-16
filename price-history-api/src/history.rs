@@ -8,7 +8,7 @@ use crate::{
     AppState,
 };
 
-const DEFAULT_INTERVAL: ChInterval = ChInterval::Hour(3);
+const DEFAULT_INTERVAL: ChInterval = ChInterval::Hour(6);
 const DEFAULT_HISTORY_DURATION: Duration = Duration::days(7);
 const DEFAULT_LEAGUE: &str = "Affliction";
 

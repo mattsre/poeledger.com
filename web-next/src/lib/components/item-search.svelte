@@ -223,6 +223,7 @@
                   <Select.Item value="minute" label="Minute">Minute</Select.Item
                   >
                   <Select.Item value="hour" label="Hour">Hour</Select.Item>
+                  <Select.Item value="day" label="Day">Day</Select.Item>
                   <Select.Item value="week" label="Week">Week</Select.Item>
                   <Select.Item value="month" label="Month">Month</Select.Item>
                   <Select.Item value="year" label="Year">Year</Select.Item>
