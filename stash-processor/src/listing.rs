@@ -121,7 +121,7 @@ impl TryFrom<Item> for Listing {
         Ok(Self {
             name: item.name,
             item_id: id,
-            league: item.league.unwrap_or("Affliction".to_owned()),
+            league: item.league.unwrap_or("Necropolis".to_owned()),
             price: price.unwrap_or_default(),
             implicit_mods: item.implicit_mods.unwrap_or_default(),
             explicit_mods: item.explicit_mods.unwrap_or_default(),

@@ -36,7 +36,12 @@ impl LeagueInfo {
 pub async fn league_info() -> anyhow::Result<impl IntoResponse, StatusCode> {
     let leagues: Vec<LeagueInfo> = vec![
         LeagueInfo::new("Standard", None, None),
-        LeagueInfo::new("Affliction", Some(datetime!(2023-12-08 19:00 UTC)), None),
+        LeagueInfo::new(
+            "Affliction",
+            Some(datetime!(2023-12-08 19:00 UTC)),
+            Some(datetime!(2023-03-26 21:00 UTC)),
+        ),
+        LeagueInfo::new("Necropolis", Some(datetime!(2024-03-29 18:00 UTC)), None),
     ];
 
     Ok(Json(leagues))

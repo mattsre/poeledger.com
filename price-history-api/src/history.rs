@@ -10,7 +10,7 @@ use crate::{
 
 const DEFAULT_INTERVAL: ChInterval = ChInterval::Hour(6);
 const DEFAULT_HISTORY_DURATION: Duration = Duration::days(7);
-const DEFAULT_LEAGUE: &str = "Affliction";
+const DEFAULT_LEAGUE: &str = "Necropolis";
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]

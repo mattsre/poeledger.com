@@ -9,4 +9,5 @@ RUN --mount=type=cache,target=/volume/target \
 
 FROM cgr.dev/chainguard/static
 COPY --from=builder --chown=nonroot:nonroot /volume/price-history-api /app/
+EXPOSE 3000
 ENTRYPOINT ["/app/price-history-api"]

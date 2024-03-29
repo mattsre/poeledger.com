@@ -3,7 +3,7 @@
 
   export const itemSearchFormSchema = z.object({
     item: z.string().default("Headhunter"),
-    league: z.string().default("Affliction"),
+    league: z.string().default("Necropolis"),
     intervalAmount: z.coerce.number().gt(0, "Interval must be greater than 0"),
     intervalUnit: z.string().default("hour"),
     tenthQuantile: z.boolean().default(true),
